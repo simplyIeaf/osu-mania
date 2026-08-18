@@ -1,0 +1,14 @@
+[versions]
+kotlin = "2.1.0"
+gdx = "1.12.1"
+gdxBackend = "1.12.1"
+
+[libraries]
+gdx = { group = "com.badlogicgames.gdx", name = "gdx", version.ref = "gdx" }
+gdx-backend-android = { group = "com.badlogicgames.gdx", name = "gdx-backend-android", version.ref = "gdxBackend" }
+gdx-freetype = { group = "com.badlogicgames.gdx", name = "gdx-freetype", version.ref = "gdx" }
+
+[plugins]
+android-application = { id = "com.android.application", version = "8.7.3" }
+android-library = { id = "com.android.library", version = "8.7.3" }
+kotlin-android = { id = "org.jetbrains.kotlin.android", version = "2.1.0" }
