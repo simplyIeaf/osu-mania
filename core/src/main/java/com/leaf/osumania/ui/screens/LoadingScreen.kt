@@ -17,6 +17,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.leaf.osumania.ui.OsuColors
+import com.leaf.osumania.ui.OsuFonts
 import com.leaf.osumania.ui.OsuManiaGame
 
 class LoadingScreen(private val game: OsuManiaGame) : Screen {
