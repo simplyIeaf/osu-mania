@@ -7,14 +7,12 @@
 APP_NAME="Gradle"
 APP_BASE_NAME=$(basename "$0")
 
-DEFAULT_JVM_OPTS='"-Xmx64m" "-Xms64m"'
+DEFAULT_JVM_OPTS=-Xmx64m\ -Xms64m
 
 MAX_FD=maximum
 
 warn () { echo "$*"; } >&2
 die () { echo; echo "$*"; echo; exit 1; } >&2
-
-CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
 # Determine the Java command to use to start the JVM.
 if [ -n "$JAVA_HOME" ] ; then
@@ -23,14 +21,15 @@ else
     JAVACMD="java"
 fi
 
-# Use the maximum available, or set MAX_FD != -1 to use that value.
-APP_HOME=$( cd "${APP_HOME:-./}" > /dev/null && pwd -P ) || exit
+APP_HOME=$( cd "${0%/*}" > /dev/null && pwd -P ) || exit
+
+CLASSPATH=$APP_HOME/gradle/wrapper/gradle-wrapper.jar
 
 exec "$JAVACMD" \
     $DEFAULT_JVM_OPTS \
     $JAVA_OPTS \
     $GRADLE_OPTS \
-    "-Dorg.gradle.appname=$APP_BASE_NAME" \
+    -Dorg.gradle.appname="$APP_BASE_NAME" \
     -classpath "$CLASSPATH" \
     org.gradle.wrapper.GradleWrapperMain \
     "$@"
