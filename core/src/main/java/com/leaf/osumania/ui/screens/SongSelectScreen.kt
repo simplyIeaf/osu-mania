@@ -8,8 +8,6 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.g2d.TextureRegion
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -25,16 +23,12 @@ import com.leaf.osumania.beatmap.BeatmapData
 import com.leaf.osumania.ui.OsuColors
 import com.leaf.osumania.ui.OsuFonts
 import com.leaf.osumania.ui.OsuManiaGame
-import com.leaf.osumania.engine.GameConstants
 
 class SongSelectScreen(private val game: OsuManiaGame) : Screen {
     private lateinit var batch: SpriteBatch
-    private lateinit var shapeRenderer: ShapeRenderer
     private lateinit var stage: Stage
     private lateinit var skin: Skin
-    private var time = 0f
     private val beatmaps = mutableListOf<BeatmapData>()
-    private var selectedBeatmap: BeatmapData? = null
 
     private fun makePanelDrawable(): Drawable {
         val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
@@ -43,12 +37,11 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
         }
         val tex = com.badlogic.gdx.graphics.Texture(pix)
         pix.dispose()
-        return TextureRegionDrawable(TextureRegion(tex))
+        return TextureRegionDrawable(com.badlogic.gdx.graphics.g2d.TextureRegion(tex))
     }
 
     override fun show() {
         batch = SpriteBatch()
-        shapeRenderer = ShapeRenderer()
         stage = Stage(ScreenViewport())
         Gdx.input.inputProcessor = stage
 
@@ -59,10 +52,6 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
         skin.add("default", Label.LabelStyle(OsuFonts.get(18), Color.WHITE))
         skin.add("small", Label.LabelStyle(OsuFonts.get(14), OsuColors.TEXT_SECONDARY))
         skin.add("title", Label.LabelStyle(OsuFonts.get(28), Color.WHITE))
-        skin.add("button", TextButton.TextButtonStyle(
-            panelDrawable, panelDrawable, panelDrawable,
-            OsuFonts.get(18), Color.WHITE, Color.WHITE, Color.GRAY
-        ))
 
         val root = Table()
         root.setFillParent(true)
@@ -74,7 +63,7 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
         val titleLabel = Label("Song Select", skin, "title")
         header.add(titleLabel).left().expandX()
 
-        val importBtn = TextButton("Import", skin, "button")
+        val importBtn = TextButton("Import", skin, "default")
         importBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 game.screen = BeatmapImportScreen(game)
@@ -83,24 +72,22 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
         header.add(importBtn).width(100f).height(40f).right()
         root.add(header).fillX().row()
 
-        val content = Table()
-        content.pad(8f)
+        val scrollContent = Table()
+        scrollContent.pad(8f)
 
-        val scrollPane = com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(content, skin)
-        scrollPane.setFadeScrollBars(false)
-        scrollPane.setScrollingDisabled(true, false)
-
-        val beatmapList = Table()
         if (beatmaps.isEmpty()) {
             val emptyLabel = Label("No beatmaps loaded.\nImport .osz files to get started.", skin, "small")
-            beatmapList.add(emptyLabel).padTop(40f)
+            scrollContent.add(emptyLabel).padTop(40f)
         } else {
             for (bm in beatmaps) {
                 val card = createBeatmapCard(bm)
-                beatmapList.add(card).fillX().padBottom(4f).row()
+                scrollContent.add(card).fillX().padBottom(4f).row()
             }
         }
-        content.add(beatmapList).fillX().expandX()
+
+        val scrollPane = com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(scrollContent, skin)
+        scrollPane.setFadeScrollBars(false)
+        scrollPane.setScrollingDisabled(true, false)
 
         root.add(scrollPane).expand().fill().row()
 
@@ -117,10 +104,6 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
             7 -> OsuColors.ACCENT_PURPLE
             else -> OsuColors.ACCENT_GREEN
         }
-
-        val colorBar = Table()
-        colorBar.color = color
-        card.add(colorBar).width(4f).fillY().padRight(8f)
 
         val info = Table()
         val titleLabel = Label("${beatmap.metadata.artist} - ${beatmap.metadata.title}", skin)
@@ -140,7 +123,6 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
 
         card.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                selectedBeatmap = beatmap
                 game.screen = GameplayScreen(game, beatmap)
             }
         })
@@ -154,7 +136,6 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
     }
 
     override fun render(delta: Float) {
-        time += delta
         Gdx.gl.glClearColor(OsuColors.BACKGROUND.r, OsuColors.BACKGROUND.g, OsuColors.BACKGROUND.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
@@ -175,7 +156,6 @@ class SongSelectScreen(private val game: OsuManiaGame) : Screen {
 
     override fun dispose() {
         batch.dispose()
-        shapeRenderer.dispose()
         stage.dispose()
         skin.dispose()
     }

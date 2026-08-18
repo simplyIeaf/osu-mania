@@ -23,13 +23,18 @@ data class TapData(
     val endTime: Float = time,
     val hitSound: HitSound = HitSound(),
     val hitSample: HitSample = HitSample(),
-    val isHoldHead: Boolean = false
+    val isHoldHead: Boolean = false,
+    var hit: Boolean = false,
+    var missed: Boolean = false
 )
 
 data class HoldData(
     val column: Int,
     val time: Float,
-    val endTime: Float
+    val endTime: Float,
+    var hit: Boolean = false,
+    var released: Boolean = false,
+    var missed: Boolean = false
 )
 
 typealias HitObject = Any

@@ -34,7 +34,6 @@ class LoadingScreen(private val game: OsuManiaGame) : Screen {
         Gdx.input.inputProcessor = stage
 
         skin = Skin()
-        skin.add("default-font", OsuFonts.get(22))
         skin.add("default", Label.LabelStyle(OsuFonts.get(22), Color.WHITE))
         skin.add("title", Label.LabelStyle(OsuFonts.get(48), OsuColors.ACCENT_PINK))
 
@@ -85,8 +84,10 @@ class LoadingScreen(private val game: OsuManiaGame) : Screen {
         val barY = cy - 40f
 
         shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.rect(barX, barY, barW, barH, OsuColors.BORDER)
-        shapeRenderer.rect(barX, barY, barW * loadProgress, barH, OsuColors.PRIMARY)
+        shapeRenderer.setColor(OsuColors.BORDER)
+        shapeRenderer.rect(barX, barY, barW, barH)
+        shapeRenderer.setColor(OsuColors.PRIMARY)
+        shapeRenderer.rect(barX, barY, barW * loadProgress, barH)
         shapeRenderer.end()
 
         stage.act(delta)

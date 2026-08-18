@@ -25,10 +25,22 @@ data class Mods(
     val isSpeedMod: Boolean get() = playbackRate != 1f
 }
 
-class ModManager {
-    val mods = Mods()
+class ModManager(initialMods: Mods = Mods()) {
+    var mods = Mods()
+        private set
 
-    fun reset() { mods = Mods() }
+    init {
+        mods = initialMods.copy()
+    }
+
+    fun reset() {
+        mods = Mods()
+    }
+
+    val isNoFail: Boolean get() = mods.noFail
+    val isAutoplay: Boolean get() = mods.autoplay
+    val isMirror: Boolean get() = mods.mirror
+    val isRandom: Boolean get() = mods.random
 
     fun getScoreMultiplier(): Float {
         var m = 1f
@@ -66,7 +78,9 @@ class ModManager {
         if (mods.autoplay) list.add("AP")
         if (mods.playbackRate == 1.5f) list.add("DT")
         if (mods.playbackRate == 0.75f) list.add("HT")
-        if (mods.playbackRate != 1f && mods.playbackRate != 1.5f && mods.playbackRate != 0.75f) list.add("%.2fx".format(mods.playbackRate))
+        if (mods.playbackRate != 1f && mods.playbackRate != 1.5f && mods.playbackRate != 0.75f) {
+            list.add("%.2fx".format(mods.playbackRate))
+        }
         if (mods.mirror) list.add("MR")
         if (mods.random) list.add("RD")
         if (mods.constantSpeed) list.add("CS")

@@ -9,7 +9,6 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.TextureRegion
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -29,7 +28,6 @@ import com.leaf.osumania.ui.OsuManiaGame
 
 class SettingsScreen(private val game: OsuManiaGame) : Screen {
     private lateinit var batch: SpriteBatch
-    private lateinit var shapeRenderer: ShapeRenderer
     private lateinit var stage: Stage
     private lateinit var skin: Skin
 
@@ -55,7 +53,6 @@ class SettingsScreen(private val game: OsuManiaGame) : Screen {
 
     override fun show() {
         batch = SpriteBatch()
-        shapeRenderer = ShapeRenderer()
         stage = Stage(ScreenViewport())
         Gdx.input.inputProcessor = stage
 
@@ -66,10 +63,15 @@ class SettingsScreen(private val game: OsuManiaGame) : Screen {
         skin.add("default", Label.LabelStyle(OsuFonts.get(16), Color.WHITE))
         skin.add("small", Label.LabelStyle(OsuFonts.get(13), OsuColors.TEXT_SECONDARY))
         skin.add("section", Label.LabelStyle(OsuFonts.get(20), OsuColors.ACCENT_PINK))
-        skin.add("button", TextButton.TextButtonStyle(
-            panelDrawable, panelDrawable, panelDrawable,
-            OsuFonts.get(18), Color.WHITE, Color.WHITE, Color.GRAY
-        ))
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.up = panelDrawable
+        btnStyle.down = panelDrawable
+        btnStyle.over = panelDrawable
+        btnStyle.font = OsuFonts.get(18)
+        btnStyle.fontColor = Color.WHITE
+        skin.add("default", btnStyle)
+
         val sliderStyle = SliderStyle(
             makeSliderDrawable(OsuColors.BORDER),
             knobDrawable
@@ -84,7 +86,7 @@ class SettingsScreen(private val game: OsuManiaGame) : Screen {
         val header = Table()
         header.background = panelDrawable
         header.pad(8f)
-        val backBtn = TextButton("< Back", skin, "button")
+        val backBtn = TextButton("< Back", skin, "default")
         backBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 game.settings.save()
@@ -121,7 +123,7 @@ class SettingsScreen(private val game: OsuManiaGame) : Screen {
         val skinStyleRow = Table()
         skinStyleRow.add(Label("Note Style:", skin, "default")).left().padRight(10f)
         for (style in GameConstants.SkinStyle.entries) {
-            val btn = TextButton(style.name, skin, "button")
+            val btn = TextButton(style.name, skin, "default")
             if (style == game.settings.skinStyle) btn.color = OsuColors.ACCENT_PINK
             btn.addListener(object : ClickListener() {
                 override fun clicked(event: InputEvent?, x: Float, y: Float) {
@@ -182,7 +184,7 @@ class SettingsScreen(private val game: OsuManiaGame) : Screen {
     private fun addToggle(table: Table, name: String, current: Boolean, onChange: (Boolean) -> Unit) {
         val row = Table()
         row.add(Label(name, skin, "default")).left().expandX()
-        val btn = TextButton(if (current) "ON" else "OFF", skin, "button")
+        val btn = TextButton(if (current) "ON" else "OFF", skin, "default")
         btn.color = if (current) OsuColors.ACCENT_GREEN else OsuColors.TEXT_SECONDARY
         btn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
@@ -216,7 +218,6 @@ class SettingsScreen(private val game: OsuManiaGame) : Screen {
 
     override fun dispose() {
         batch.dispose()
-        shapeRenderer.dispose()
         stage.dispose()
         skin.dispose()
     }

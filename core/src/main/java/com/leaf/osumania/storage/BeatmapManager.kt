@@ -1,10 +1,9 @@
-package com.leaf.osumania.storage
+package com.leaf.osumania.beatmap
 
+import com.badlogic.gdx.utils.JsonValue
 import com.leaf.osumania.api.ApiBeatmapSet
 import com.leaf.osumania.api.OsuApiClient
-import com.leaf.osumania.beatmap.BeatmapData
-import com.leaf.osumania.beatmap.BeatmapParser
-import com.leaf.osumania.beatmap.OszLoader
+import com.leaf.osumania.storage.DatabaseHelper
 
 class BeatmapManager(
     private val apiClient: OsuApiClient,
@@ -13,14 +12,17 @@ class BeatmapManager(
     private val localBeatmaps = mutableMapOf<String, BeatmapData>()
     private val downloadedSets = mutableMapOf<Int, ByteArray>()
 
-    fun loadFromOsz(bytes: ByteArray): BeatmapData? {
+    fun loadFromOsz(bytes: ByteArray): Pair<BeatmapData?, ByteArray?> {
         return try {
-            val oszLoader = OszLoader()
-            val oszData = oszLoader.load(bytes) ?: return null
-            val parser = BeatmapParser()
-            parser.parse(oszData)
+            val result = loadOsz(bytes)
+            if (result.osuFiles.isEmpty()) return Pair(null, null)
+            val osuText = String(result.osuFiles.first().second)
+            val lines = osuText.lines()
+            val beatmap = parseOsuFile(lines)
+            val audioBytes = result.audioFiles.values.firstOrNull()
+            Pair(beatmap, audioBytes)
         } catch (e: Exception) {
-            null
+            Pair(null, null)
         }
     }
 
@@ -55,8 +57,8 @@ class BeatmapManager(
     }
 
     fun importOszFile(bytes: ByteArray): BeatmapData? {
-        val beatmap = loadFromOsz(bytes) ?: return null
-        localBeatmaps[beatmap.md5Hash] = beatmap
-        return beatmap
+        val result = loadFromOsz(bytes).first ?: return null
+        localBeatmaps[result.beatmapHash.ifEmpty { result.metadata.title }] = result
+        return result
     }
 }

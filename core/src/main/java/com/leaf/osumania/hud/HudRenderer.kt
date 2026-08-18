@@ -6,12 +6,14 @@ import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
-import com.badlogic.gdx.utils.Align
 import com.leaf.osumania.engine.GameConstants
 import com.leaf.osumania.engine.GameEngine
+import com.leaf.osumania.storage.SettingsStore
 
-class HudRenderer(private val engine: GameEngine) {
-
+class HudRenderer(
+    private val engine: GameEngine,
+    private val settings: SettingsStore
+) {
     val scoreFont = BitmapFont()
     val comboFont = BitmapFont()
     val accuracyFont = BitmapFont()
@@ -32,16 +34,6 @@ class HudRenderer(private val engine: GameEngine) {
     private val judgementStartScale = 1.2f
     private val judgementEndScale = 1.0f
 
-    private data class TimingMark(
-        var error: Float,
-        var judgement: Int,
-        var alpha: Float = 1f,
-        var age: Float = 0f
-    )
-
-    private val timingMarks = mutableListOf<TimingMark>()
-    private val markLifetime = 4f
-
     private var kpsCounter = 0
     private var totalHits = 0
     private var kpsTimer = 0f
@@ -49,6 +41,8 @@ class HudRenderer(private val engine: GameEngine) {
 
     private var healthFlashTimer = 0f
     private var previousHealth = 1f
+
+    private val judgementNames = arrayOf("320", "300", "200", "100", "50", "Miss")
 
     private val judgementColors = intArrayOf(
         0xFF00FFFF.toInt(),
@@ -58,8 +52,6 @@ class HudRenderer(private val engine: GameEngine) {
         0xFFFF9900.toInt(),
         0xFFFF3333.toInt()
     )
-
-    private val judgementNames = arrayOf("320g", "300", "200", "100", "50", "Miss")
 
     init {
         scoreFont.data.setScale(1.5f)
@@ -75,19 +67,11 @@ class HudRenderer(private val engine: GameEngine) {
         judgementScale = judgementStartScale
         judgementAlpha = 1f
         judgementEarlyLate = earlyOrLate ?: ""
-        if (judgement != GameConstants.Judgement.MISS) {
-            kpsCounter++
-            totalHits++
-        } else {
-            totalHits++
-        }
+        kpsCounter++
+        totalHits++
     }
 
     fun addTimingMark(error: Float, judgement: Int) {
-        if (timingMarks.size >= 150) {
-            timingMarks.removeAt(0)
-        }
-        timingMarks.add(TimingMark(error, judgement))
         errorBar.addMark(error, judgement)
     }
 
@@ -119,50 +103,40 @@ class HudRenderer(private val engine: GameEngine) {
             kpsTimer -= 1f
         }
 
-        val iterator = timingMarks.iterator()
-        while (iterator.hasNext()) {
-            val mark = iterator.next()
-            mark.age += deltaTime
-            mark.alpha = (1f - mark.age / markLifetime).coerceIn(0f, 1f)
-            if (mark.age >= markLifetime) {
-                iterator.remove()
-            }
-        }
-
         errorBar.update(deltaTime)
     }
 
     fun render(shapeRenderer: ShapeRenderer, batch: SpriteBatch, viewportWidth: Float, viewportHeight: Float) {
         batch.begin()
 
-        if (engine.settings.showScore) {
+        if (settings.showScore) {
             renderScore(batch, viewportWidth, viewportHeight)
         }
 
-        if (engine.settings.showCombo) {
+        if (settings.showCombo) {
             renderCombo(batch, viewportWidth, viewportHeight)
         }
 
-        if (engine.settings.showAccuracy) {
+        if (settings.showAccuracy) {
             renderAccuracy(batch, viewportWidth, viewportHeight)
         }
 
-        if (engine.settings.showHealthBar) {
+        if (settings.showHealthBar) {
             batch.end()
             renderHealthBar(shapeRenderer, viewportWidth, viewportHeight)
             renderProgressBar(shapeRenderer, viewportWidth, viewportHeight)
             batch.begin()
         }
 
-        if (engine.settings.showJudgement && judgementTimer < judgementDuration) {
+        if (settings.showJudgement && judgementTimer < judgementDuration) {
             renderJudgement(batch, viewportWidth, viewportHeight)
         }
 
-        if (engine.settings.showErrorBar) {
+        if (settings.showErrorBar) {
             batch.end()
             errorBar.x = viewportWidth / 2f
             errorBar.y = 20f
-            errorBar.scale = engine.settings.errorBarScale
+            errorBar.scale = settings.errorBarScale
             errorBar.render(shapeRenderer)
             batch.begin()
         }
@@ -170,12 +144,8 @@ class HudRenderer(private val engine: GameEngine) {
         renderKpsCounter(batch, viewportWidth, viewportHeight)
         renderJudgementCounter(batch, viewportWidth, viewportHeight)
 
-        if (engine.settings.showFps) {
+        if (settings.showFps) {
             renderFps(batch, viewportWidth, viewportHeight)
-        }
-
-        if (engine.countdownActive) {
-            renderCountdown(batch, viewportWidth, viewportHeight)
         }
 
         batch.end()
@@ -196,7 +166,7 @@ class HudRenderer(private val engine: GameEngine) {
     }
 
     private fun renderAccuracy(batch: SpriteBatch, viewportWidth: Float, viewportHeight: Float) {
-        val accText = String.format("%.2f%%", engine.accuracy * 100f)
+        val accText = String.format("%.2f%%", engine.accuracy)
         layout.setText(accuracyFont, accText)
         accuracyFont.color = Color(0.8f, 0.8f, 0.8f, 1f)
         accuracyFont.draw(batch, accText, viewportWidth - layout.width - 20f, viewportHeight - 50f)
@@ -208,19 +178,22 @@ class HudRenderer(private val engine: GameEngine) {
         val barX = viewportWidth - barWidth - 20f
         val barY = viewportHeight - 80f
 
-        shapeRenderer.rect(barX, barY, barWidth, barHeight, Color(0.2f, 0.2f, 0.2f, 0.8f))
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.8f)
+        shapeRenderer.rect(barX, barY, barWidth, barHeight)
 
         val healthWidth = barWidth * engine.health.coerceIn(0f, 1f)
-        val healthColor = when {
+        val hc = when {
             engine.health > 0.5f -> Color(0.2f, 0.8f, 0.2f, 1f)
             engine.health > 0.25f -> Color(1f, 0.8f, 0f, 1f)
             else -> Color(1f, 0.2f, 0.2f, 1f)
         }
-        shapeRenderer.rect(barX, barY, healthWidth, barHeight, healthColor)
+        shapeRenderer.setColor(hc)
+        shapeRenderer.rect(barX, barY, healthWidth, barHeight)
 
         if (healthFlashTimer > 0f) {
             val flashAlpha = (healthFlashTimer / 0.15f) * 0.5f
-            shapeRenderer.rect(barX, barY, barWidth, barHeight, Color(1f, 0f, 0f, flashAlpha))
+            shapeRenderer.setColor(1f, 0f, 0f, flashAlpha)
+            shapeRenderer.rect(barX, barY, barWidth, barHeight)
         }
     }
 
@@ -230,20 +203,22 @@ class HudRenderer(private val engine: GameEngine) {
         val barX = viewportWidth - barWidth - 20f
         val barY = viewportHeight - 90f
 
-        shapeRenderer.rect(barX, barY, barWidth, barHeight, Color(0.2f, 0.2f, 0.2f, 0.8f))
+        shapeRenderer.setColor(0.2f, 0.2f, 0.2f, 0.8f)
+        shapeRenderer.rect(barX, barY, barWidth, barHeight)
 
         val progress = engine.progress.coerceIn(0f, 1f)
-        shapeRenderer.rect(barX, barY, barWidth * progress, barHeight, Color(0.3f, 0.5f, 1f, 1f))
+        shapeRenderer.setColor(0.3f, 0.5f, 1f, 1f)
+        shapeRenderer.rect(barX, barY, barWidth * progress, barHeight)
     }
 
     private fun renderJudgement(batch: SpriteBatch, viewportWidth: Float, viewportHeight: Float) {
         val name = when (currentJudgement) {
-            GameConstants.Judgement.IDOL -> "320g"
-            GameConstants.Judgement.PERFECT -> "300"
-            GameConstants.Judgement.GREAT -> "200"
-            GameConstants.Judgement.GOOD -> "100"
-            GameConstants.Judgement.BAD -> "50"
-            GameConstants.Judgement.MISS -> "Miss"
+            GameConstants.JUDGEMENT_IDOL -> "320"
+            GameConstants.JUDGEMENT_PERFECT -> "300"
+            GameConstants.JUDGEMENT_GREAT -> "200"
+            GameConstants.JUDGEMENT_GOOD -> "100"
+            GameConstants.JUDGEMENT_BAD -> "50"
+            GameConstants.JUDGEMENT_MISS -> "Miss"
             else -> ""
         }
 
@@ -278,10 +253,11 @@ class HudRenderer(private val engine: GameEngine) {
         val counts = engine.judgementCounts
         smallFont.color = Color(0.7f, 0.7f, 0.7f, 0.8f)
         var yOffset = viewportHeight - 60f
-        for (i in judgementNames.indices) {
+        val keys = intArrayOf(320, 300, 200, 100, 50, 0)
+        for (i in keys.indices) {
             val colour = Color(judgementColors[i])
             smallFont.color = colour
-            val text = "${judgementNames[i]}: ${counts.getOrElse(i) { 0 }}"
+            val text = "${judgementNames[i]}: ${counts[keys[i]] ?: 0}"
             smallFont.draw(batch, text, 10f, yOffset)
             yOffset -= 16f
         }
@@ -291,20 +267,6 @@ class HudRenderer(private val engine: GameEngine) {
         val fpsText = "FPS: ${Gdx.graphics.framesPerSecond}"
         smallFont.color = Color(0.5f, 1f, 0.5f, 0.7f)
         smallFont.draw(batch, fpsText, 10f, viewportHeight - 4f)
-    }
-
-    private fun renderCountdown(batch: SpriteBatch, viewportWidth: Float, viewportHeight: Float) {
-        val seconds = ((engine.countdownValue + 0.99f).toInt()).coerceAtLeast(0)
-        val text = if (seconds > 0) seconds.toString() else "Go!"
-        judgementFont.data.setScale(3f)
-        judgementFont.color = Color.WHITE
-        layout.setText(judgementFont, text)
-        judgementFont.draw(
-            batch, text,
-            (viewportWidth - layout.width) / 2f,
-            viewportHeight / 2f + layout.height / 2f
-        )
-        judgementFont.data.setScale(1.5f)
     }
 
     fun dispose() {

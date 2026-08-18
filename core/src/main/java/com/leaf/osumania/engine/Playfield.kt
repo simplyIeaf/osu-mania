@@ -24,10 +24,16 @@ class Playfield(
     var stageX: Float = 0f
         private set
 
+    var stageXOffset: Float = 0f
+    var stageScale: Float = 1f
+
     fun recalculate() {
-        val baseLaneWidth = GameConstants.LANE_WIDTHS[GameConstants.LANE_WIDTHS.size.coerceAtMost(keyCount) - 1]
+        val baseLaneWidth = GameConstants.LANE_WIDTHS[
+            (keyCount - 1).coerceIn(0, GameConstants.LANE_WIDTHS.size - 1)
+        ]
         val scaleFactor = screenWidth / GameConstants.OSU_WIDTH
-        columnWidth = (baseLaneWidth * scaleFactor * laneWidthAdjustment).coerceAtMost(screenWidth / keyCount * 0.95f)
+        columnWidth = (baseLaneWidth * scaleFactor * laneWidthAdjustment * stageScale)
+            .coerceAtMost(screenWidth / keyCount * 0.95f)
 
         val columnRatio = when (skinStyle) {
             GameConstants.SkinStyle.CIRCLE -> GameConstants.CIRCLE_COLUMN_RATIO
@@ -41,10 +47,12 @@ class Playfield(
         stageWidth = columnWidth * keyCount + totalSpacing
         notesContainerWidth = stageWidth
 
-        hitPosition = screenHeight - hitPositionOffset
+        hitPosition = screenHeight - hitPositionOffset + noteOffset
 
         val maxX = screenWidth - stageWidth
-        stageX = (maxX * stagePosition).coerceIn(0f, maxX)
+        val baseX = (maxX * stagePosition).coerceIn(0f, maxX)
+        val offsetPx = stageXOffset * screenWidth
+        stageX = (baseX + offsetPx).coerceIn(0f, maxX)
     }
 
     fun getColumnX(column: Int): Float {

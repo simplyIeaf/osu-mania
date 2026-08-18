@@ -1,17 +1,18 @@
 package com.leaf.osumania.engine
 
 import com.leaf.osumania.beatmap.BeatmapData
+import com.leaf.osumania.beatmap.HoldData
+import com.leaf.osumania.beatmap.TapData
 import com.leaf.osumania.beatmap.TimingPoint
-import com.leaf.osumania.scoring.ScoreSystem
-import com.leaf.osumania.health.HealthSystem
-import com.leaf.osumania.input.InputSystem
-import com.leaf.osumania.audio.AudioSystem
 import com.leaf.osumania.mods.ModManager
-import com.leaf.osumania.replay.ReplayRecorder
-import com.leaf.osumania.replay.ReplayPlayer
-import com.leaf.osumania.settings.GameSettings
-import com.leaf.osumania.objects.TapData
-import com.leaf.osumania.objects.HoldData
+import com.leaf.osumania.mods.Mods
+import com.leaf.osumania.storage.SettingsStore
+import com.leaf.osumania.systems.AudioSystem
+import com.leaf.osumania.systems.HealthSystem
+import com.leaf.osumania.systems.InputSystem
+import com.leaf.osumania.systems.ReplayPlayer
+import com.leaf.osumania.systems.ReplayRecorder
+import com.leaf.osumania.systems.ScoreSystem
 
 class GameEngine {
     var state: GameState = GameState.LOADING
@@ -30,6 +31,10 @@ class GameEngine {
         private set
     var currentTimingPointIndex: Int = 0
         private set
+    var progress: Float = 0f
+        private set
+    var countdownActive: Boolean = false
+    var countdownValue: Float = 0f
 
     lateinit var scoreSystem: ScoreSystem
         private set
@@ -57,6 +62,9 @@ class GameEngine {
     var columns: MutableList<MutableList<Any>> = mutableListOf()
         private set
 
+    var columnIndices = IntArray(0)
+        private set
+
     var scrollSpeed: Float = 1f
     var hitPositionOffset: Float = 50f
     var backgroundDim: Float = 0.8f
@@ -66,18 +74,26 @@ class GameEngine {
     var upscroll: Boolean = false
     var constantSpeed: Boolean = false
     var playbackRate: Float = 1f
-    var allowNegativeOffset: Boolean = false
 
-    private var columnIndices: IntArray = intArrayOf()
     private var songStartTime: Float = 0f
     private var pauseOffset: Float = 0f
     private var unpauseTimeRemaining: Float = 0f
-    private var breakTime: Boolean = false
-    private var failThreshold: Float = 0.5f
 
-    fun init(beatmap: BeatmapData, settings: GameSettings) {
+    val judgementCounts: Map<Int, Int>
+        get() = scoreSystem.let {
+            mapOf(
+                320 to it.getJudgementCount(320),
+                300 to it.getJudgementCount(300),
+                200 to it.getJudgementCount(200),
+                100 to it.getJudgementCount(100),
+                50 to it.getJudgementCount(50),
+                0 to it.getJudgementCount(0)
+            )
+        }
+
+    fun init(beatmap: BeatmapData, settings: SettingsStore) {
         beatmapData = beatmap
-        keyCount = settings.keyCount
+        keyCount = beatmap.difficulty.keyCount
         scrollSpeed = settings.scrollSpeed
         hitPositionOffset = settings.hitPositionOffset
         backgroundDim = settings.backgroundDim
@@ -85,25 +101,33 @@ class GameEngine {
         performanceMode = settings.performanceMode
         upscroll = settings.upscroll
         constantSpeed = settings.constantSpeed
-        playbackRate = settings.playbackRate
+        playbackRate = settings.scrollSpeed.let { 1f }
+
+        val sw = com.badlogic.gdx.Gdx.graphics.width.toFloat()
+        val sh = com.badlogic.gdx.Gdx.graphics.height.toFloat()
 
         playfield = Playfield(
-            screenWidth = settings.screenWidth,
-            screenHeight = settings.screenHeight,
+            screenWidth = sw,
+            screenHeight = sh,
             keyCount = keyCount,
             hitPositionOffset = hitPositionOffset,
-            upscroll = upscroll,
-            skinStyle = settings.skinStyle,
+            stagePosition = settings.stagePosition,
+            noteOffset = settings.noteOffset,
+            noteScale = settings.noteScale,
             laneWidthAdjustment = settings.laneWidthAdjustment,
-            laneSpacing = settings.laneSpacing
+            laneSpacing = settings.laneSpacing,
+            upscroll = upscroll,
+            skinStyle = settings.skinStyle
         )
+        playfield.stageXOffset = settings.stageXOffset
+        playfield.stageScale = settings.stageWidth
         playfield.recalculate()
 
         scoreSystem = ScoreSystem()
         healthSystem = HealthSystem()
         inputSystem = InputSystem(keyCount)
         audioSystem = AudioSystem()
-        modManager = ModManager(settings.enabledMods)
+        modManager = ModManager()
 
         columnIndices = IntArray(keyCount) { 0 }
         columns.clear()
@@ -115,24 +139,39 @@ class GameEngine {
         holdObjects.clear()
 
         for (ho in beatmap.hitObjects) {
-            val column = ho.column.coerceIn(0, keyCount - 1)
-            if (ho.isHold) {
+            val column: Int
+            val time: Float
+            val endTime: Float
+            val isHold: Boolean
+
+            when (ho) {
+                is TapData -> {
+                    column = ho.column.coerceIn(0, keyCount - 1)
+                    time = ho.time
+                    endTime = ho.endTime
+                    isHold = ho.isHoldHead
+                }
+                is HoldData -> {
+                    column = ho.column.coerceIn(0, keyCount - 1)
+                    time = ho.time
+                    endTime = ho.endTime
+                    isHold = true
+                }
+                else -> continue
+            }
+
+            if (isHold) {
                 val holdData = HoldData(
                     column = column,
-                    time = ho.time,
-                    endTime = ho.endTime,
-                    hit = false,
-                    released = false,
-                    missed = false
+                    time = time,
+                    endTime = endTime
                 )
                 holdObjects.add(holdData)
                 columns[column].add(holdData)
             } else {
                 val tapData = TapData(
                     column = column,
-                    time = ho.time,
-                    hit = false,
-                    missed = false
+                    time = time
                 )
                 hitObjects.add(tapData)
                 columns[column].add(tapData)
@@ -148,9 +187,9 @@ class GameEngine {
         accuracy = 100f
         currentTimingPointIndex = 0
         timeElapsed = 0f
-        songStartTime = beatmapData.audioLeadIn
+        songStartTime = beatmapData.delay
         pauseOffset = 0f
-        breakTime = false
+        progress = 0f
 
         state = GameState.WAIT
     }
@@ -182,6 +221,10 @@ class GameEngine {
         checkLateMisses()
         checkFail()
         checkFinish()
+
+        if (beatmapData.endTime > beatmapData.startTime) {
+            progress = ((timeElapsed - beatmapData.startTime) / (beatmapData.endTime - beatmapData.startTime)).coerceIn(0f, 1f)
+        }
 
         if (!performanceMode) {
             healthSystem.passiveDrain(deltaTime, currentTimingPoint())
@@ -232,7 +275,6 @@ class GameEngine {
                     combo = 0
                     healthSystem.miss()
                     audioSystem.playMissSound()
-                    replayRecorder?.recordRelease(column, timeElapsed, false)
                 }
                 break
             }
@@ -252,15 +294,14 @@ class GameEngine {
                     combo = 0
                     healthSystem.miss()
                     audioSystem.playMissSound()
+                    scoreSystem.miss()
                 } else {
                     note.hit = true
                     combo++
                     if (combo > maxCombo) maxCombo = combo
                     scoreSystem.hit(judgement, combo)
                     healthSystem.hit(judgement)
-                    audioSystem.playHitsound(judgement)
                 }
-                replayRecorder?.recordHit(column, timeElapsed, delta, judgement)
             }
             is HoldData -> {
                 delta = timeElapsed - note.time
@@ -270,20 +311,19 @@ class GameEngine {
                     combo = 0
                     healthSystem.miss()
                     audioSystem.playMissSound()
+                    scoreSystem.miss()
                 } else {
                     note.hit = true
                     combo++
                     if (combo > maxCombo) maxCombo = combo
                     scoreSystem.hit(judgement, combo)
                     healthSystem.hit(judgement)
-                    audioSystem.playHitsound(judgement)
                 }
-                replayRecorder?.recordHit(column, timeElapsed, delta, judgement)
             }
         }
 
-        score = scoreSystem.score
-        accuracy = scoreSystem.accuracy
+        score = scoreSystem.score.toInt()
+        accuracy = scoreSystem.accuracy * 100f
         health = healthSystem.health
     }
 
@@ -299,6 +339,12 @@ class GameEngine {
         }
     }
 
+    fun getObjectOffset(timeElapsed: Float, noteTime: Float): Float {
+        return (timeElapsed - noteTime) * scrollSpeed / 1000f * playfield.screenHeight
+    }
+
+    fun getMissWindow(): Float = GameConstants.MISS_WINDOW
+
     private fun findCurrentNote(column: Int): Any? {
         if (column < 0 || column >= columns.size) return null
         val col = columns[column]
@@ -309,7 +355,7 @@ class GameEngine {
                 is TapData -> {
                     if (!note.hit && !note.missed) {
                         val delta = timeElapsed - note.time
-                        if (delta <= 157f) {
+                        if (kotlin.math.abs(delta) <= 157f) {
                             columnIndices[column] = i
                             return note
                         }
@@ -318,7 +364,7 @@ class GameEngine {
                 is HoldData -> {
                     if (!note.hit && !note.missed) {
                         val delta = timeElapsed - note.time
-                        if (delta <= 157f) {
+                        if (kotlin.math.abs(delta) <= 157f) {
                             columnIndices[column] = i
                             return note
                         }
@@ -335,33 +381,21 @@ class GameEngine {
             val idx = columnIndices[c]
             for (i in idx until col.size) {
                 val note = col[i]
-                when (note) {
-                    is TapData -> {
-                        if (!note.hit && !note.missed) {
-                            if (timeElapsed - note.time > 157f) {
-                                note.missed = true
-                                columnIndices[c] = i + 1
-                                combo = 0
-                                healthSystem.miss()
-                                scoreSystem.miss()
-                                accuracy = scoreSystem.accuracy
-                                replayRecorder?.recordMiss(c, timeElapsed, note.time)
-                            }
-                        }
+                val isMissed = when (note) {
+                    is TapData -> !note.hit && !note.missed && timeElapsed - note.time > 157f
+                    is HoldData -> !note.hit && !note.missed && timeElapsed - note.time > 157f
+                    else -> false
+                }
+                if (isMissed) {
+                    when (note) {
+                        is TapData -> note.missed = true
+                        is HoldData -> note.missed = true
                     }
-                    is HoldData -> {
-                        if (!note.hit && !note.missed) {
-                            if (timeElapsed - note.time > 157f) {
-                                note.missed = true
-                                columnIndices[c] = i + 1
-                                combo = 0
-                                healthSystem.miss()
-                                scoreSystem.miss()
-                                accuracy = scoreSystem.accuracy
-                                replayRecorder?.recordMiss(c, timeElapsed, note.time)
-                            }
-                        }
-                    }
+                    columnIndices[c] = i + 1
+                    combo = 0
+                    healthSystem.miss()
+                    scoreSystem.miss()
+                    accuracy = scoreSystem.accuracy * 100f
                 }
             }
         }
@@ -447,7 +481,7 @@ class GameEngine {
 
     private fun currentTimingPoint(): TimingPoint {
         if (beatmapData.timingPoints.isEmpty()) {
-            return TimingPoint(0f, 0f, scrollSpeed)
+            return TimingPoint(0f, 0f, scrollSpeed = scrollSpeed)
         }
         return beatmapData.timingPoints[currentTimingPointIndex.coerceAtMost(beatmapData.timingPoints.size - 1)]
     }

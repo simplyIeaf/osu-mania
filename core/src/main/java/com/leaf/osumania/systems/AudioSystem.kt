@@ -4,8 +4,6 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.audio.Music
 import com.badlogic.gdx.audio.Sound
 import com.badlogic.gdx.utils.Disposable
-import java.io.ByteArrayInputStream
-import javax.sound.sampled.AudioSystem
 
 class AudioSystem : Disposable {
     var song: Music? = null; private set
@@ -13,45 +11,21 @@ class AudioSystem : Disposable {
     var musicVolume: Float = 0.8f
     var sfxVolume: Float = 0.8f
     private var songPosition: Float = 0f
+    var isPlaying: Boolean = false; private set
 
     fun loadSong(bytes: ByteArray) {
         song?.stop()
         song?.dispose()
-
-        val tempFile = java.io.File.createTempFile("osumania_song", ".wav")
+        val tempFile = java.io.File.createTempFile("osumania_song", ".mp3")
         tempFile.deleteOnExit()
-
-        try {
-            val inputStream = ByteArrayInputStream(bytes)
-            val audioInputStream = AudioSystem.getAudioInputStream(inputStream)
-            val ais = AudioSystem.getAudioInputStream(
-                javax.sound.sampled.AudioFormat(
-                    javax.sound.sampled.AudioFormat.Encoding.PCM_SIGNED,
-                    audioInputStream.format.sampleRate,
-                    16,
-                    audioInputStream.format.channels,
-                    audioInputStream.format.channels * 2,
-                    audioInputStream.format.sampleRate,
-                    false
-                ),
-                audioInputStream
-            )
-            val bufferedOutput = java.io.ByteArrayOutputStream()
-            val buffer = ByteArray(4096)
-            var bytesRead: Int
-            while (ais.read(buffer).also { bytesRead = it } != -1) {
-                bufferedOutput.write(buffer, 0, bytesRead)
-            }
-            val pcmData = bufferedOutput.toByteArray()
-            val sampleRate = audioInputStream.format.sampleRate.toInt()
-            val channels = audioInputStream.format.channels
-
-            tempFile.writeBytes(pcmData)
-        } catch (e: Exception) {
-            tempFile.writeBytes(bytes)
-        }
-
+        tempFile.writeBytes(bytes)
         song = Gdx.audio.newMusic(Gdx.files.absolute(tempFile.absolutePath))
+    }
+
+    fun loadSong(path: String) {
+        song?.stop()
+        song?.dispose()
+        song = Gdx.audio.newMusic(Gdx.files.internal(path))
     }
 
     fun playSong(rate: Float = 1f) {
@@ -59,6 +33,7 @@ class AudioSystem : Disposable {
             it.volume = musicVolume
             it.play()
             it.setPosition(songPosition)
+            isPlaying = true
         }
     }
 
@@ -67,27 +42,61 @@ class AudioSystem : Disposable {
             songPosition = it.position
             it.pause()
         }
+        isPlaying = false
     }
 
     fun stopSong() {
         song?.stop()
         songPosition = 0f
+        isPlaying = false
     }
 
-    fun seek(position: Float): Float {
-        song?.let {
-            it.setPosition(position)
-            songPosition = position
+    fun pause() {
+        pauseSong()
+    }
+
+    fun resume() {
+        song?.play()
+        isPlaying = true
+    }
+
+    fun stop() {
+        stopSong()
+    }
+
+    fun seekTo(position: Float) {
+        song?.setPosition(position)
+        songPosition = position
+    }
+
+    fun getCurrentPosition(): Float {
+        return song?.position ?: songPosition
+    }
+
+    fun playHitsound(column: Int) {
+        val key = "hit_normal"
+        val sound = hitsounds[key]
+        sound?.play(sfxVolume)
+    }
+
+    fun playHitsound(judgement: Int) {
+        when (judgement) {
+            320 -> playHitsound("hitclap")
+            300 -> playHitsound("hitnormal")
+            200 -> playHitsound("hitwhistle")
+            else -> {}
         }
-        return songPosition
     }
 
-    fun isPlaying(): Boolean = song?.isPlaying ?: false
-
-    fun playHitsound(set: String, sample: String, volume: Float) {
+    fun playHitsound(set: String, sample: String, volume: Float = 1f) {
         val key = "${set}_${sample}"
         val sound = hitsounds[key]
         sound?.play(sfxVolume * volume)
+    }
+
+    fun playMissSound() {
+        val sound = hitsounds["miss"]
+        sound?.play(sfxVolume)
     }
 
     fun registerHitsound(key: String, sound: Sound) {

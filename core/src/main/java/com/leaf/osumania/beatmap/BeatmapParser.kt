@@ -52,7 +52,7 @@ fun getLineValue(lines: List<String>, key: String, default: String = ""): String
 fun parseOsuFile(
     lines: List<String>,
     columnCount: Int = 0,
-    mods: Mods? = null,
+    holdOff: Boolean = false,
     audioOffset: Float = 0f,
     columnMap: IntArray? = null
 ): BeatmapData {
@@ -229,7 +229,7 @@ fun parseOsuFile(
     val breaks = mutableListOf<Break>()
     val allObjects = mutableListOf<Any>()
     allObjects.addAll(adjustedTaps)
-    if (mods?.holdOff != true) {
+    if (!holdOff) {
         allObjects.addAll(adjustedHolds)
     }
 
@@ -296,6 +296,4 @@ fun parseOsuFile(
     )
 }
 
-data class Mods(
-    val holdOff: Boolean = false
-)
+

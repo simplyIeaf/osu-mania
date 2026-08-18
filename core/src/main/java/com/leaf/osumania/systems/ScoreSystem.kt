@@ -1,103 +1,118 @@
 package com.leaf.osumania.systems
 
 import com.leaf.osumania.engine.GameConstants
-import com.leaf.osumania.engine.GameEngine
-import kotlin.math.sqrt
-import kotlin.math.roundToInt
 import kotlin.math.abs
 
-class ScoreSystem(private val engine: GameEngine) {
+class ScoreSystem {
     var bonus: Float = 100f; private set
     var score: Long = 0L; private set
-    var combo: Int = 0; private set
     var maxCombo: Int = 0; private set
     var accuracy: Float = 1f; private set
     var multiplier: Float = 1f; private set
+    var currentCombo: Int = 0; private set
 
-    private val judgementCounts = mutableMapOf(320 to 0, 300 to 0, 200 to 0, 100 to 0, 50 to 0, 0 to 0)
+    private val judgementCounts = mutableMapOf(
+        320 to 0, 300 to 0, 200 to 0, 100 to 0, 50 to 0, 0 to 0
+    )
     val hitErrors = mutableListOf<Float>()
 
     var totalHitObjects: Int = 0
     var latestJudgement: Int = -1
+        private set
     var latestEarlyOrLate: String? = null
+        private set
 
     fun reset() {
-        bonus = 100f; score = 0L; combo = 0; maxCombo = 0; accuracy = 1f
-        judgementCounts.clear(); judgementCounts.putAll(mapOf(320 to 0, 300 to 0, 200 to 0, 100 to 0, 50 to 0, 0 to 0))
+        bonus = 100f
+        score = 0L
+        currentCombo = 0
+        maxCombo = 0
+        accuracy = 1f
+        multiplier = 1f
+        judgementCounts.clear()
+        judgementCounts.putAll(mapOf(320 to 0, 300 to 0, 200 to 0, 100 to 0, 50 to 0, 0 to 0))
         hitErrors.clear()
+        totalHitObjects = 0
+        latestJudgement = -1
+        latestEarlyOrLate = null
     }
 
-    fun hit(judgement: Int, earlyOrLate: String?, isForHold: Boolean = false) {
-        if (engine.health <= GameConstants.MIN_HEALTH && !engine.mods.noFail) return
-
-        val scoreToAdd = getScoreToAdd(judgement)
-        score = (score + scoreToAdd).coerceIn(0, GameConstants.MAX_SCORE.toLong())
-
-        engine.healthSystem.hit(judgement, isForHold)
-
+    fun hit(judgement: Int, combo: Int) {
+        totalHitObjects++
+        latestJudgement = judgement
         judgementCounts[judgement] = (judgementCounts[judgement] ?: 0) + 1
 
-        if (judgement == 0) {
-            combo = 0
-        } else {
-            combo++
-            if (combo > maxCombo) maxCombo = combo
+        currentCombo = combo
+        if (combo > maxCombo) maxCombo = combo
+
+        val bonusValue = GameConstants.getHitBonusValue(judgement)
+        val bonusChange = GameConstants.getHitBonusChange(judgement)
+
+        bonus = (bonus + bonusChange).coerceIn(0f, 100f)
+
+        val comboScore = combo * (GameConstants.MAX_COMBO_BONUS / 1000f)
+        val bonusScore = (bonus * multiplier).toInt().toLong()
+
+        val scoreToAdd = when (judgement) {
+            320 -> (300 * multiplier * (1 + comboScore / 25f)).toLong() + bonusScore
+            300 -> (300 * multiplier * (1 + comboScore / 25f)).toLong() + bonusScore
+            200 -> (200 * multiplier * (1 + comboScore / 25f)).toLong() + bonusScore
+            100 -> (100 * multiplier * (1 + comboScore / 25f)).toLong() + bonusScore
+            50 -> (50 * multiplier * (1 + comboScore / 25f)).toLong() + bonusScore
+            else -> 0L
         }
 
-        latestJudgement = judgement
-        latestEarlyOrLate = earlyOrLate
-        accuracy = calculateAccuracy()
+        score = (score + scoreToAdd).coerceIn(0, GameConstants.MAX_SCORE.toLong())
+        updateAccuracy()
     }
 
-    private fun getScoreToAdd(judgement: Int): Float {
-        val baseScore = (GameConstants.MAX_SCORE.toFloat() / 2f / totalHitObjects) * judgement.toFloat() / 320f
-        bonus = (bonus + GameConstants.getHitBonusChange(judgement).toFloat()).coerceIn(0f, 100f)
-        val bonusScore = (GameConstants.MAX_SCORE.toFloat() / 2f / totalHitObjects) * GameConstants.getHitBonusValue(judgement).toFloat() * sqrt(bonus) / 320f
-        return (baseScore + bonusScore) * multiplier
+    fun miss() {
+        totalHitObjects++
+        latestJudgement = 0
+        judgementCounts[0] = (judgementCounts[0] ?: 0) + 1
+        bonus = (bonus - 100).coerceIn(0f, 100f)
+        currentCombo = 0
+        updateAccuracy()
     }
 
-    private fun calculateAccuracy(): Float {
-        val weight = 305f * (judgementCounts[320] ?: 0) + 300f * (judgementCounts[300] ?: 0) +
-            200f * (judgementCounts[200] ?: 0) + 100f * (judgementCounts[100] ?: 0) +
-            50f * (judgementCounts[50] ?: 0)
-        val total = judgementCounts.values.sum()
-        return if (total > 0) weight / (305f * total) else 1f
+    fun holdComplete() {
+        bonus = (bonus + 2).coerceIn(0f, 100f)
     }
 
-    fun getJudgementCount(judgement: Int): Int = judgementCounts[judgement] ?: 0
-
-    fun recordHitError(error: Float, judgement: Int) {
-        hitErrors.add(error)
-    }
-
-    fun calculatePp(starRating: Float): Float {
-        val acc320 = 320f * (judgementCounts[320] ?: 0)
-        val acc300 = 300f * (judgementCounts[300] ?: 0)
-        val acc200 = 200f * (judgementCounts[200] ?: 0)
-        val acc100 = 100f * (judgementCounts[100] ?: 0)
-        val acc50 = 50f * (judgementCounts[50] ?: 0)
-        val total = judgementCounts.values.sum()
-        if (total == 0) return 0f
-        val accValue = (acc320 + acc300 + acc200 + acc100 + acc50) / (320f * total)
-        val totalHits = judgementCounts.values.sum()
-        var value = 8f * Math.pow(Math.max(0.0, (starRating - 0.15).toDouble()), 2.2).toFloat() *
-            Math.max(0f, 5f * accValue - 4f) * (1f + 0.1f * Math.min(1f, totalHits / 1500f))
-        if (engine.mods.noFail) value *= 0.75f
-        if (engine.mods.easy) value *= 0.5f
-        return Math.round(value).toFloat()
+    fun getJudgementCount(judgement: Int): Int {
+        return judgementCounts[judgement] ?: 0
     }
 
     fun getLetterGrade(): String {
-        val nonPerfect = (judgementCounts[200] ?: 0) + (judgementCounts[100] ?: 0) + (judgementCounts[50] ?: 0) + (judgementCounts[0] ?: 0)
-        if (nonPerfect == 0) return "SS"
+        val pct = accuracy * 100f
         return when {
-            accuracy > 0.95f -> "S"
-            accuracy > 0.90f -> "A"
-            accuracy > 0.80f -> "B"
-            accuracy > 0.70f -> "C"
-            else -> "D"
+            judgementCounts[320] == totalHitObjects && totalHitObjects > 0 -> "X"
+            pct >= 95f -> "S"
+            pct >= 90f -> "A"
+            pct >= 80f -> "B"
+            pct >= 70f -> "C"
+            pct >= 60f -> "D"
+            else -> "F"
         }
     }
 
-    fun getHitErrorsArray(): FloatArray = hitErrors.toFloatArray()
+    fun calculatePp(keyCount: Float): Float {
+        if (totalHitObjects == 0) return 0f
+        val basePp = totalHitObjects * 0.15f * (keyCount / 4f)
+        return basePp * accuracy * multiplier
+    }
+
+    private fun updateAccuracy() {
+        if (totalHitObjects == 0) {
+            accuracy = 1f
+            return
+        }
+        val weighted = (judgementCounts[320] ?: 0) * 320 +
+            (judgementCounts[300] ?: 0) * 300 +
+            (judgementCounts[200] ?: 0) * 200 +
+            (judgementCounts[100] ?: 0) * 100 +
+            (judgementCounts[50] ?: 0) * 50
+        val maxPossible = totalHitObjects * 320
+        accuracy = if (maxPossible > 0) weighted.toFloat() / maxPossible.toFloat() else 1f
+    }
 }

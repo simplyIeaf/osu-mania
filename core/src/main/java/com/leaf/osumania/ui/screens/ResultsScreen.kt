@@ -16,6 +16,7 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.viewport.ScreenViewport
+import com.leaf.osumania.engine.GameConstants
 import com.leaf.osumania.engine.GameEngine
 import com.leaf.osumania.ui.OsuColors
 import com.leaf.osumania.ui.OsuFonts
@@ -26,21 +27,12 @@ class ResultsScreen(private val game: OsuManiaGame, private val engine: GameEngi
     private lateinit var shapeRenderer: ShapeRenderer
     private lateinit var stage: Stage
     private lateinit var skin: Skin
-    private lateinit var titleFont: BitmapFont
-    private lateinit var numberFont: BitmapFont
-    private lateinit var smallFont: BitmapFont
-    private lateinit var layout: GlyphLayout
 
     override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
         stage = Stage(ScreenViewport())
         Gdx.input.inputProcessor = stage
-
-        titleFont = OsuFonts.get(36)
-        numberFont = OsuFonts.get(48)
-        smallFont = OsuFonts.get(18)
-        layout = GlyphLayout()
 
         skin = Skin()
         skin.add("default", Label.LabelStyle(OsuFonts.get(18), Color.WHITE))
@@ -81,7 +73,7 @@ class ResultsScreen(private val game: OsuManiaGame, private val engine: GameEngi
         for (j in intArrayOf(320, 300, 200, 100, 50, 0)) {
             val count = engine.scoreSystem.getJudgementCount(j)
             val name = when (j) { 320 -> "320g"; else -> j.toString() }
-            val color = com.leaf.osumania.engine.GameConstants.JUDGEMENT_COLORS[j] ?: Color.WHITE
+            val color = GameConstants.JUDGEMENT_COLORS[j] ?: Color.WHITE
             val nameLabel = Label(name, skin, "small")
             nameLabel.color = color
             judgementsTable.add(nameLabel).width(40f).left().padRight(8f)
@@ -90,13 +82,13 @@ class ResultsScreen(private val game: OsuManiaGame, private val engine: GameEngi
         }
         root.add(judgementsTable).padBottom(20f).row()
 
-        val pp = engine.scoreSystem.calculatePp(engine.beatmapData?.difficulty?.keyCount?.toFloat() ?: 4f)
+        val pp = engine.scoreSystem.calculatePp(engine.beatmapData.difficulty.keyCount.toFloat())
         val ppLabel = Label("PP: ${pp.toInt()}", skin, "title")
         root.add(ppLabel).padBottom(30f).row()
 
         val btnTable = Table()
 
-        val backBtn = TextButton("Back", skin, "button")
+        val backBtn = TextButton("Back", skin, "default")
         backBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 game.screen = SongSelectScreen(game)
@@ -104,15 +96,10 @@ class ResultsScreen(private val game: OsuManiaGame, private val engine: GameEngi
         })
         btnTable.add(backBtn).width(140f).height(50f).padRight(10f)
 
-        val retryBtn = TextButton("Retry", skin, "button")
+        val retryBtn = TextButton("Retry", skin, "default")
         retryBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                val beatmap = engine.beatmapData
-                if (beatmap != null) {
-                    game.screen = GameplayScreen(game, beatmap)
-                } else {
-                    game.screen = SongSelectScreen(game)
-                }
+                game.screen = GameplayScreen(game, engine.beatmapData)
             }
         })
         btnTable.add(retryBtn).width(140f).height(50f)

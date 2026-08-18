@@ -23,9 +23,9 @@ class ReplayPlayer(private val engine: GameEngine) {
             if (event.time > timeElapsed) break
 
             if (event.isDown) {
-                engine.inputSystem.hit(event.column, event.time)
+                engine.hit(event.column)
             } else {
-                engine.inputSystem.release(event.column, event.time)
+                engine.release(event.column)
             }
             currentIndex++
         }

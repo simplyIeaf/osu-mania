@@ -9,26 +9,18 @@ import com.badlogic.gdx.graphics.g2d.SpriteBatch
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.InputListener
 import com.badlogic.gdx.scenes.scene2d.Stage
+import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.leaf.osumania.beatmap.BeatmapData
 import com.leaf.osumania.engine.GameEngine
 import com.leaf.osumania.engine.GameState
-import com.leaf.osumania.engine.Playfield
 import com.leaf.osumania.objects.NoteRenderer
 import com.leaf.osumania.hud.HudRenderer
-import com.leaf.osumania.systems.InputSystem
-import com.leaf.osumania.systems.AudioSystem
-import com.leaf.osumania.systems.ScoreSystem
-import com.leaf.osumania.systems.HealthSystem
-import com.leaf.osumania.systems.ReplayRecorder
-import com.leaf.osumania.mods.ModManager
 import com.leaf.osumania.ui.OsuColors
 import com.leaf.osumania.ui.OsuFonts
 import com.leaf.osumania.ui.OsuManiaGame
@@ -37,7 +29,6 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
     private lateinit var batch: SpriteBatch
     private lateinit var shapeRenderer: ShapeRenderer
     private lateinit var engine: GameEngine
-    private lateinit var playfield: Playfield
     private lateinit var noteRenderer: NoteRenderer
     private lateinit var hudRenderer: HudRenderer
     private var paused = false
@@ -48,30 +39,11 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
 
-        val sw = Gdx.graphics.width.toFloat()
-        val sh = Gdx.graphics.height.toFloat()
-
-        val settings = game.settings
-        playfield = Playfield().apply {
-            screenWidth = sw
-            screenHeight = sh
-            keyCount = beatmap.difficulty.keyCount
-            hitPositionOffset = settings.hitPositionOffset
-            stagePosition = settings.stagePosition
-            noteOffset = settings.noteOffset
-            noteScale = settings.noteScale
-            laneWidthAdjustment = settings.laneWidthAdjustment
-            laneSpacing = settings.laneSpacing
-            upscroll = settings.upscroll
-            skinStyle = settings.skinStyle
-            recalculate()
-        }
-
         engine = GameEngine()
-        engine.init(beatmap, settings)
+        engine.init(beatmap, game.settings)
 
-        noteRenderer = NoteRenderer(engine, playfield)
-        hudRenderer = HudRenderer()
+        noteRenderer = NoteRenderer(engine, engine.playfield, game.settings)
+        hudRenderer = HudRenderer(engine, game.settings)
     }
 
     override fun render(delta: Float) {
@@ -83,7 +55,7 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
             return
         }
 
-        engine.update(delta * 1000f)
+        engine.update(delta)
 
         val w = Gdx.graphics.width.toFloat()
         val h = Gdx.graphics.height.toFloat()
@@ -105,7 +77,6 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
 
         if (engine.state == GameState.FINISH || engine.state == GameState.FAIL) {
             game.screen = ResultsScreen(game, engine)
-            return
         }
     }
 
@@ -116,11 +87,10 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
         val viewportH = 480f
         val viewportW = viewportH * (sw / sh)
         val scaleX = viewportW / sw
-        val scaleY = viewportH / sh
 
         for (i in 0 until cols) {
-            val colX = playfield.getColumnX(i)
-            val colW = playfield.columnWidth
+            val colX = engine.playfield.getColumnX(i)
+            val colW = engine.playfield.columnWidth
             val inputX = Gdx.input.x * scaleX
 
             val isTouched = Gdx.input.isTouched &&
@@ -153,11 +123,11 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
     }
 
     private fun showPauseOverlay() {
-        val screen = this
         pauseStage = Stage(ScreenViewport())
         pauseSkin = Skin()
         pauseSkin!!.add("default", Label.LabelStyle(OsuFonts.get(20), Color.WHITE))
         pauseSkin!!.add("title", Label.LabelStyle(OsuFonts.get(30), Color.WHITE))
+        pauseSkin!!.add("button", TextButton.TextButtonStyle())
 
         val root = Table()
         root.setFillParent(true)
@@ -169,7 +139,7 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
         val titleLabel = Label("Paused", pauseSkin, "title")
         overlay.add(titleLabel).padBottom(30f).row()
 
-        val resumeBtn = TextButton("Continue", pauseSkin, "button")
+        val resumeBtn = TextButton("Continue", pauseSkin, "default")
         resumeBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 togglePause()
@@ -177,7 +147,7 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
         })
         overlay.add(resumeBtn).width(200f).height(50f).padBottom(10f).row()
 
-        val retryBtn = TextButton("Retry", pauseSkin, "button")
+        val retryBtn = TextButton("Retry", pauseSkin, "default")
         retryBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 pauseStage?.dispose()
@@ -186,7 +156,7 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
         })
         overlay.add(retryBtn).width(200f).height(50f).padBottom(10f).row()
 
-        val quitBtn = TextButton("Quit", pauseSkin, "button")
+        val quitBtn = TextButton("Quit", pauseSkin, "default")
         quitBtn.color = OsuColors.ACCENT_RED
         quitBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
@@ -209,7 +179,6 @@ class GameplayScreen(private val game: OsuManiaGame, private val beatmap: Beatma
     }
 
     override fun resize(width: Int, height: Int) {
-        stage.viewport.update(width, height, true)
         pauseStage?.viewport?.update(width, height, true)
     }
 

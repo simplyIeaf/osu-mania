@@ -8,7 +8,6 @@ import com.badlogic.gdx.graphics.Pixmap
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.glutils.ShapeRenderer
 import com.badlogic.gdx.scenes.scene2d.InputEvent
 import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
@@ -25,7 +24,6 @@ import com.leaf.osumania.ui.OsuManiaGame
 
 class MainMenuScreen(private val game: OsuManiaGame) : Screen {
     private lateinit var batch: SpriteBatch
-    private lateinit var shapeRenderer: ShapeRenderer
     private lateinit var stage: Stage
     private lateinit var skin: Skin
     private var titleFont: BitmapFont? = null
@@ -44,7 +42,6 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
 
     override fun show() {
         batch = SpriteBatch()
-        shapeRenderer = ShapeRenderer()
         stage = Stage(ScreenViewport())
         Gdx.input.inputProcessor = stage
 
@@ -54,10 +51,14 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
         skin.add("default-font", OsuFonts.get(22))
         skin.add("default", Label.LabelStyle(OsuFonts.get(22), Color.WHITE))
         skin.add("title", Label.LabelStyle(OsuFonts.get(42), OsuColors.ACCENT_PINK))
-        skin.add("button", TextButton.TextButtonStyle(
-            panelDrawable, panelDrawable, panelDrawable,
-            OsuFonts.get(24), Color.WHITE, Color.WHITE, Color.GRAY
-        ))
+
+        val btnStyle = TextButton.TextButtonStyle()
+        btnStyle.up = panelDrawable
+        btnStyle.down = panelDrawable
+        btnStyle.over = panelDrawable
+        btnStyle.font = OsuFonts.get(24)
+        btnStyle.fontColor = Color.WHITE
+        skin.add("default", btnStyle)
 
         val root = Table()
         root.setFillParent(true)
@@ -66,7 +67,7 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
         val title = Label("osu!mania", skin, "title")
         root.add(title).padBottom(80f).row()
 
-        val playBtn = TextButton("  Play  ", skin, "button")
+        val playBtn = TextButton("  Play  ", skin, "default")
         playBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 game.screen = SongSelectScreen(game)
@@ -74,7 +75,7 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
         })
         root.add(playBtn).width(280f).height(60f).padBottom(16f).row()
 
-        val settingsBtn = TextButton("  Settings  ", skin, "button")
+        val settingsBtn = TextButton("  Settings  ", skin, "default")
         settingsBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
                 game.screen = SettingsScreen(game)
@@ -82,7 +83,7 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
         })
         root.add(settingsBtn).width(280f).height(60f).padBottom(16f).row()
 
-        val exitBtn = TextButton("  Exit  ", skin, "button")
+        val exitBtn = TextButton("  Exit  ", skin, "default")
         exitBtn.color = OsuColors.ACCENT_RED
         exitBtn.addListener(object : ClickListener() {
             override fun clicked(event: InputEvent?, x: Float, y: Float) {
@@ -101,34 +102,6 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
         Gdx.gl.glClearColor(OsuColors.BACKGROUND.r, OsuColors.BACKGROUND.g, OsuColors.BACKGROUND.b, 1f)
         Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
 
-        val w = Gdx.graphics.width.toFloat()
-        val h = Gdx.graphics.height.toFloat()
-        shapeRenderer.projectionMatrix.setToOrtho2D(0f, 0f, w, h)
-
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        val dotSpacing = 40f
-        var dx = 0f
-        while (dx < w) {
-            var dy = 0f
-            while (dy < h) {
-                val pulse = 0.05f + 0.03f * Math.sin((time * 0.5 + dx * 0.01 + dy * 0.01).toDouble()).toFloat()
-                shapeRenderer.setColor(OsuColors.BORDER.r, OsuColors.BORDER.g, OsuColors.BORDER.b, pulse)
-                shapeRenderer.circle(dx, dy, 2f)
-                dy += dotSpacing
-            }
-            dx += dotSpacing
-        }
-        shapeRenderer.end()
-
-        batch.projectionMatrix.setToOrtho2D(0f, 0f, w, h)
-        batch.begin()
-        titleFont?.let { font ->
-            layout?.setText(it, "osu!mania")
-            it.color = OsuColors.ACCENT_PINK
-            it.draw(batch, layout!!, w / 2f - layout!!.width / 2f, h * 0.75f)
-        }
-        batch.end()
-
         stage.act(delta)
         stage.draw()
     }
@@ -146,7 +119,6 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
 
     override fun dispose() {
         batch.dispose()
-        shapeRenderer.dispose()
         stage.dispose()
         skin.dispose()
     }
