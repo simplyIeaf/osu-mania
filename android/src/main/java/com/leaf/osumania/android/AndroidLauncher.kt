@@ -23,7 +23,6 @@ class AndroidLauncher : AndroidApplication() {
             useAccelerometer = false
             useCompass = false
             numSamples = 0
-            useGLSurfaceView = true
         }
         val game = OsuManiaGame()
         game.externalFileLoader = { uri -> loadExternalFile(uri) }
