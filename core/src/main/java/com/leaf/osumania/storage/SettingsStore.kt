@@ -21,6 +21,7 @@ class SettingsStore {
     var receptorLighting: Boolean = true
     var performanceMode: Boolean = false
     var upscroll: Boolean = false
+    var constantSpeed: Boolean = false
     var showScore: Boolean = true
     var showCombo: Boolean = true
     var showAccuracy: Boolean = true
@@ -155,6 +156,7 @@ class SettingsStore {
         prefs.putBoolean("receptorLighting", receptorLighting)
         prefs.putBoolean("performanceMode", performanceMode)
         prefs.putBoolean("upscroll", upscroll)
+        prefs.putBoolean("constantSpeed", constantSpeed)
         prefs.putBoolean("showScore", showScore)
         prefs.putBoolean("showCombo", showCombo)
         prefs.putBoolean("showAccuracy", showAccuracy)
@@ -209,6 +211,7 @@ class SettingsStore {
         receptorLighting = prefs.getBoolean("receptorLighting", true)
         performanceMode = prefs.getBoolean("performanceMode", false)
         upscroll = prefs.getBoolean("upscroll", false)
+        constantSpeed = prefs.getBoolean("constantSpeed", false)
         showScore = prefs.getBoolean("showScore", true)
         showCombo = prefs.getBoolean("showCombo", true)
         showAccuracy = prefs.getBoolean("showAccuracy", true)
@@ -268,6 +271,7 @@ class SettingsStore {
         receptorLighting = true
         performanceMode = false
         upscroll = false
+        constantSpeed = false
         showScore = true
         showCombo = true
         showAccuracy = true
