@@ -4,6 +4,8 @@ import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Screen
 import com.badlogic.gdx.graphics.Color
 import com.badlogic.gdx.graphics.GL20
+import com.badlogic.gdx.graphics.Pixmap
+import com.badlogic.gdx.graphics.Texture
 import com.badlogic.gdx.graphics.g2d.BitmapFont
 import com.badlogic.gdx.graphics.g2d.GlyphLayout
 import com.badlogic.gdx.graphics.g2d.SpriteBatch
@@ -12,40 +14,56 @@ import com.badlogic.gdx.scenes.scene2d.Stage
 import com.badlogic.gdx.scenes.scene2d.ui.Label
 import com.badlogic.gdx.scenes.scene2d.ui.Skin
 import com.badlogic.gdx.scenes.scene2d.ui.Table
+import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
 import com.badlogic.gdx.utils.viewport.ScreenViewport
 import com.leaf.osumania.ui.OsuColors
-import com.leaf.osumania.ui.OsuFonts
 import com.leaf.osumania.ui.OsuManiaGame
 
 class LoadingScreen(private val game: OsuManiaGame) : Screen {
-    private lateinit var batch: SpriteBatch
-    private lateinit var shapeRenderer: ShapeRenderer
-    private lateinit var stage: Stage
-    private lateinit var skin: Skin
+    private var batch: SpriteBatch? = null
+    private var shapeRenderer: ShapeRenderer? = null
+    private var stage: Stage? = null
+    private var skin: Skin? = null
     private var loadProgress = 0f
     private var loaded = false
     private var titleFont: BitmapFont? = null
     private var layout: GlyphLayout? = null
+    private var disposables = mutableListOf<com.badlogic.gdx.utils.Disposable>()
 
     override fun show() {
-        batch = SpriteBatch()
-        shapeRenderer = ShapeRenderer()
-        stage = Stage(ScreenViewport())
-        Gdx.input.inputProcessor = stage
+        try {
+            batch = SpriteBatch()
+            shapeRenderer = ShapeRenderer()
+            stage = Stage(ScreenViewport())
+            Gdx.input.inputProcessor = stage
 
-        skin = Skin()
-        skin.add("default", Label.LabelStyle(OsuFonts.get(22), Color.WHITE))
-        skin.add("title", Label.LabelStyle(OsuFonts.get(48), OsuColors.ACCENT_PINK))
+            val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
+                setColor(Color.WHITE)
+                fill()
+            }
+            val tex = Texture(pix)
+            pix.dispose()
 
-        val table = Table(skin)
-        table.setFillParent(true)
-        table.center()
-        val titleLabel = Label("osu!mania", skin, "title")
-        table.add(titleLabel).padBottom(40f).row()
-        stage.addActor(table)
+            skin = Skin()
+            skin!!.add("white", tex)
 
-        titleFont = OsuFonts.get(48)
-        layout = GlyphLayout()
+            val lblStyle = Label.LabelStyle(OsuFonts.get(22), Color.WHITE)
+            val titleStyle = Label.LabelStyle(OsuFonts.get(48), OsuColors.ACCENT_PINK)
+            skin!!.add("default", lblStyle)
+            skin!!.add("title", titleStyle)
+
+            val table = Table()
+            table.setFillParent(true)
+            table.center()
+            val titleLabel = Label("osu!mania", skin, "title")
+            table.add(titleLabel).padBottom(40f).row()
+            stage!!.addActor(table)
+
+            titleFont = OsuFonts.get(48)
+            layout = GlyphLayout()
+        } catch (e: Exception) {
+            Gdx.app.error("OsuMania", "LoadingScreen.show() failed", e)
+        }
     }
 
     override fun render(delta: Float) {
@@ -54,7 +72,11 @@ class LoadingScreen(private val game: OsuManiaGame) : Screen {
             if (loadProgress >= 1f) {
                 loadProgress = 1f
                 loaded = true
-                game.screen = MainMenuScreen(game)
+                try {
+                    game.screen = MainMenuScreen(game)
+                } catch (e: Exception) {
+                    Gdx.app.error("OsuMania", "Failed to transition to MainMenu", e)
+                }
                 return
             }
         }
@@ -64,40 +86,43 @@ class LoadingScreen(private val game: OsuManiaGame) : Screen {
 
         val w = Gdx.graphics.width.toFloat()
         val h = Gdx.graphics.height.toFloat()
-        shapeRenderer.projectionMatrix.setToOrtho2D(0f, 0f, w, h)
-        batch.projectionMatrix.setToOrtho2D(0f, 0f, w, h)
+        val sr = shapeRenderer ?: return
+        val b = batch ?: return
+
+        sr.projectionMatrix.setToOrtho2D(0f, 0f, w, h)
+        b.projectionMatrix.setToOrtho2D(0f, 0f, w, h)
 
         val cx = w / 2f
         val cy = h / 2f
 
-        batch.begin()
+        b.begin()
         val f = titleFont
         val l = layout
         if (f != null && l != null) {
             l.setText(f, "osu!mania")
             f.color = OsuColors.ACCENT_PINK
-            f.draw(batch, l, cx - l.width / 2f, cy + 60f)
+            f.draw(b, l, cx - l.width / 2f, cy + 60f)
         }
-        batch.end()
+        b.end()
 
         val barW = 300f
         val barH = 6f
         val barX = cx - barW / 2f
         val barY = cy - 40f
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        shapeRenderer.setColor(OsuColors.BORDER)
-        shapeRenderer.rect(barX, barY, barW, barH)
-        shapeRenderer.setColor(OsuColors.PRIMARY)
-        shapeRenderer.rect(barX, barY, barW * loadProgress, barH)
-        shapeRenderer.end()
+        sr.begin(ShapeRenderer.ShapeType.Filled)
+        sr.setColor(OsuColors.BORDER)
+        sr.rect(barX, barY, barW, barH)
+        sr.setColor(OsuColors.PRIMARY)
+        sr.rect(barX, barY, barW * loadProgress, barH)
+        sr.end()
 
-        stage.act(delta)
-        stage.draw()
+        stage?.act(delta)
+        stage?.draw()
     }
 
     override fun resize(width: Int, height: Int) {
-        stage.viewport.update(width, height, true)
+        stage?.viewport?.update(width, height, true)
     }
 
     override fun pause() {}
@@ -108,9 +133,10 @@ class LoadingScreen(private val game: OsuManiaGame) : Screen {
     }
 
     override fun dispose() {
-        batch.dispose()
-        shapeRenderer.dispose()
-        stage.dispose()
-        skin.dispose()
+        try { batch?.dispose() } catch (_: Exception) {}
+        try { shapeRenderer?.dispose() } catch (_: Exception) {}
+        try { stage?.dispose() } catch (_: Exception) {}
+        try { skin?.dispose() } catch (_: Exception) {}
+        disposables.forEach { try { it.dispose() } catch (_: Exception) {} }
     }
 }

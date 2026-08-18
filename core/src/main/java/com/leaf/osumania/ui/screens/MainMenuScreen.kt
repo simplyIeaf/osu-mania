@@ -118,8 +118,8 @@ class MainMenuScreen(private val game: OsuManiaGame) : Screen {
     }
 
     override fun dispose() {
-        batch.dispose()
-        stage.dispose()
-        skin.dispose()
+        try { batch.dispose() } catch (_: Exception) {}
+        try { stage.dispose() } catch (_: Exception) {}
+        try { skin.dispose() } catch (_: Exception) {}
     }
 }

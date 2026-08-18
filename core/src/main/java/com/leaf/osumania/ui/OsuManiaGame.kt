@@ -12,15 +12,23 @@ class OsuManiaGame : Game() {
     var externalFileLoader: ((String) -> ByteArray?)? = null
 
     override fun create() {
-        OsuFonts.init()
+        try {
+            OsuFonts.init()
+        } catch (e: Exception) {
+            Gdx.app.error("OsuMania", "OsuFonts.init failed", e)
+        }
         settings = SettingsStore()
-        settings.load()
+        try {
+            settings.load()
+        } catch (e: Exception) {
+            Gdx.app.error("OsuMania", "SettingsStore.load failed", e)
+        }
         setScreen(LoadingScreen(this))
     }
 
     override fun dispose() {
-        OsuFonts.dispose()
-        screen?.dispose()
+        try { OsuFonts.dispose() } catch (_: Exception) {}
+        try { screen?.dispose() } catch (_: Exception) {}
         super.dispose()
     }
 

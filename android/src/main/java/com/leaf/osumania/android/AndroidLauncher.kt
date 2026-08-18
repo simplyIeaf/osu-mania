@@ -2,9 +2,9 @@ package com.leaf.osumania.android
 
 import android.content.Intent
 import android.os.Bundle
+import android.util.Log
 import android.view.View
 import android.view.WindowManager
-import android.widget.FrameLayout
 import com.badlogic.gdx.backends.android.AndroidApplication
 import com.badlogic.gdx.backends.android.AndroidApplicationConfiguration
 import com.leaf.osumania.ui.OsuManiaGame
@@ -18,16 +18,21 @@ class AndroidLauncher : AndroidApplication() {
             or View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
             or View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
         )
-        val config = AndroidApplicationConfiguration().apply {
-            useImmersiveMode = true
-            useAccelerometer = false
-            useCompass = false
-            numSamples = 0
+        try {
+            val config = AndroidApplicationConfiguration().apply {
+                useImmersiveMode = true
+                useAccelerometer = false
+                useCompass = false
+                numSamples = 0
+            }
+            val game = OsuManiaGame()
+            game.externalFileLoader = { uri -> loadExternalFile(uri) }
+            initialize(game, config)
+            handleIntent(intent)
+        } catch (e: Exception) {
+            Log.e("OsuMania", "Crash during init", e)
+            throw e
         }
-        val game = OsuManiaGame()
-        game.externalFileLoader = { uri -> loadExternalFile(uri) }
-        initialize(game, config)
-        handleIntent(intent)
     }
 
     override fun onNewIntent(intent: Intent) {
