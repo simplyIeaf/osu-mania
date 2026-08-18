@@ -1,5 +1,6 @@
 package com.leaf.osumania.ui.screens
 
+import android.widget.FrameLayout
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -28,8 +29,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import androidx.compose.ui.viewinterop.AndroidView
 import androidx.fragment.app.FragmentActivity
-import androidx.fragment.compose.AndroidFragment
 import com.leaf.osumania.beatmap.BeatmapData
 import com.leaf.osumania.engine.GameConstants
 import com.leaf.osumania.engine.GameState
@@ -64,7 +65,7 @@ fun GameplayScreen(
                 ?.findFragmentByTag("gameplay_frag")
                 ?.let { frag ->
                     (frag as? GameplayLibGdxFragment)?.let {
-                        it.engine?.quit()
+                        it.quitEngine()
                     }
                 }
             onQuit()
@@ -88,9 +89,19 @@ fun GameplayScreen(
     }
 
     Box(modifier = Modifier.fillMaxSize().background(Color.Black)) {
-        AndroidFragment<GameplayLibGdxFragment>(
-            modifier = Modifier.fillMaxSize(),
-            tag = "gameplay_frag"
+        AndroidView(
+            factory = { ctx ->
+                val frameLayout = FrameLayout(ctx).apply {
+                    id = android.view.View.generateViewId()
+                }
+                val activity = ctx as FragmentActivity
+                val fragment = GameplayLibGdxFragment()
+                activity.supportFragmentManager.beginTransaction()
+                    .add(frameLayout.id, fragment, "gameplay_frag")
+                    .commit()
+                frameLayout
+            },
+            modifier = Modifier.fillMaxSize()
         )
 
         GameplayHUD(stateHolder, settings, onRetry, onQuit)
@@ -163,7 +174,7 @@ private fun GameplayHUD(
                 0 -> "Miss"
                 else -> ""
             }
-            val jColor = GameConstants.JUDGEMENT_COLORS[state.judgement] ?: Color.White
+            val jColor = GameConstants.JUDGEMENT_COLORS[state.judgement]?.let { Color(it.r, it.g, it.b, it.a) } ?: Color.White
             val alpha = if (state.judgementTimer < 0.48f) 1f else {
                 1f - ((state.judgementTimer - 0.48f) / 0.32f).coerceIn(0f, 1f)
             }

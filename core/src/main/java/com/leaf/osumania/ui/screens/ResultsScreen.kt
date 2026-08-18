@@ -19,6 +19,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -76,7 +77,7 @@ fun ResultsScreen(
             for (j in intArrayOf(320, 300, 200, 100, 50, 0)) {
                 val count = engine.scoreSystem.getJudgementCount(j)
                 val name = if (j == 320) "320g" else j.toString()
-                val color = GameConstants.JUDGEMENT_COLORS[j] ?: TextSecondary
+                val color = GameConstants.JUDGEMENT_COLORS[j]?.let { Color(it.r, it.g, it.b, it.a) } ?: TextSecondary
                 Row(modifier = Modifier.padding(vertical = 2.dp)) {
                     Text(text = name, color = color, fontSize = 14.sp, modifier = Modifier.width(50.dp))
                     Text(text = count.toString(), color = TextSecondary, fontSize = 14.sp)

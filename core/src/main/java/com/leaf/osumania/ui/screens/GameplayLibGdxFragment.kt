@@ -1,5 +1,10 @@
 package com.leaf.osumania.ui.screens
 
+import android.os.Bundle
+import android.view.LayoutInflater
+import android.view.View
+import android.view.ViewGroup
+import com.badlogic.gdx.ApplicationListener
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.backends.android.AndroidFragmentApplication
 import com.badlogic.gdx.graphics.GL20
@@ -14,7 +19,7 @@ import com.leaf.osumania.objects.NoteRenderer
 import com.leaf.osumania.storage.SettingsStore
 import com.leaf.osumania.ui.GameplayStateHolder
 
-class GameplayLibGdxFragment : AndroidFragmentApplication() {
+class GameplayLibGdxFragment : AndroidFragmentApplication(), ApplicationListener {
     companion object {
         var stateHolder: GameplayStateHolder? = null
         var beatmapData: BeatmapData? = null
@@ -22,8 +27,21 @@ class GameplayLibGdxFragment : AndroidFragmentApplication() {
     }
 
     var engine: GameEngine? = null
+    private var batch: SpriteBatch? = null
+    private var shapeRenderer: ShapeRenderer? = null
+    private var noteRenderer: NoteRenderer? = null
+    private val font = BitmapFont()
+    private val layout = GlyphLayout()
 
-    override fun createScreen() {
+    override fun onCreateView(
+        inflater: LayoutInflater,
+        container: ViewGroup?,
+        savedInstanceState: Bundle?
+    ): View {
+        return initializeForView(this)
+    }
+
+    override fun create() {
         val bm = beatmapData ?: return
         val st = settingsStore ?: return
         val sh = stateHolder ?: return
@@ -32,33 +50,21 @@ class GameplayLibGdxFragment : AndroidFragmentApplication() {
         e.init(bm, st)
         engine = e
         sh.engine = e
-        setScreen(InnerGameplayScreen(e, st, sh))
-    }
-}
 
-class InnerGameplayScreen(
-    private val engine: GameEngine,
-    private val settings: SettingsStore,
-    private val stateHolder: GameplayStateHolder
-) : com.badlogic.gdx.Screen {
-    private lateinit var batch: SpriteBatch
-    private lateinit var shapeRenderer: ShapeRenderer
-    private lateinit var noteRenderer: NoteRenderer
-    private val font = BitmapFont()
-    private val layout = GlyphLayout()
-    private var lastDelta = 0f
-
-    override fun show() {
         batch = SpriteBatch()
         shapeRenderer = ShapeRenderer()
-        noteRenderer = NoteRenderer(engine, engine.playfield, settings)
+        noteRenderer = NoteRenderer(e, e.playfield, st)
     }
 
-    override fun render(delta: Float) {
-        lastDelta = delta
+    override fun render() {
+        val e = engine ?: return
+        val sh = stateHolder ?: return
+        val nr = noteRenderer ?: return
+        val b = batch ?: return
+        val sr = shapeRenderer ?: return
 
-        if (!stateHolder.paused) {
-            engine.update(delta)
+        if (!sh.paused) {
+            e.update(Gdx.graphics.deltaTime)
         }
 
         Gdx.gl.glClearColor(0f, 0f, 0f, 1f)
@@ -69,29 +75,30 @@ class InnerGameplayScreen(
         val viewportH = 480f
         val viewportW = viewportH * (w / h)
 
-        shapeRenderer.projectionMatrix.setToOrtho2D(0f, 0f, viewportW, viewportH)
-        batch.projectionMatrix.setToOrtho2D(0f, 0f, viewportW, viewportH)
+        sr.projectionMatrix.setToOrtho2D(0f, 0f, viewportW, viewportH)
+        b.projectionMatrix.setToOrtho2D(0f, 0f, viewportW, viewportH)
 
-        shapeRenderer.begin(ShapeRenderer.ShapeType.Filled)
-        noteRenderer.render(shapeRenderer, batch, font, layout)
-        shapeRenderer.end()
+        sr.begin(ShapeRenderer.ShapeType.Filled)
+        nr.render(sr, b, font, layout)
+        sr.end()
 
-        if (!stateHolder.paused) {
+        if (!sh.paused) {
             handleInput()
         }
 
-        stateHolder.updateFromEngine(engine)
-        stateHolder.updateJudgementTimer(delta)
+        sh.updateFromEngine(e)
+        sh.updateJudgementTimer(Gdx.graphics.deltaTime)
 
-        if (engine.state == GameState.FINISH || engine.state == GameState.FAIL) {
+        if (e.state == GameState.FINISH || e.state == GameState.FAIL) {
             Gdx.app.postRunnable {
-                stateHolder.onGameEnd?.invoke(engine)
+                sh.onGameEnd?.invoke(e)
             }
         }
     }
 
     private fun handleInput() {
-        val cols = engine.keyCount
+        val e = engine ?: return
+        val cols = e.keyCount
         val sw = Gdx.graphics.width.toFloat()
         val sh = Gdx.graphics.height.toFloat()
         val viewportH = 480f
@@ -99,24 +106,25 @@ class InnerGameplayScreen(
         val scaleX = viewportW / sw
 
         for (i in 0 until cols) {
-            val colX = engine.playfield.getColumnX(i)
-            val colW = engine.playfield.columnWidth
+            val colX = e.playfield.getColumnX(i)
+            val colW = e.playfield.columnWidth
             val inputX = Gdx.input.x * scaleX
             val isTouched = Gdx.input.isTouched && inputX >= colX && inputX <= colX + colW
 
-            if (isTouched && !engine.inputSystem.isPressed(i)) {
-                engine.hit(i)
-                noteRenderer.setColumnPressed(i, true)
-            } else if (!isTouched && engine.inputSystem.isPressed(i)) {
-                engine.release(i)
-                noteRenderer.setColumnPressed(i, false)
+            if (isTouched && !e.inputSystem.isPressed(i)) {
+                e.hit(i)
+                noteRenderer?.setColumnPressed(i, true)
+            } else if (!isTouched && e.inputSystem.isPressed(i)) {
+                e.release(i)
+                noteRenderer?.setColumnPressed(i, false)
             }
         }
 
         if (Gdx.input.isKeyJustPressed(com.badlogic.gdx.Input.Keys.ESCAPE)) {
-            if (!stateHolder.paused) {
-                engine.pause()
-                stateHolder.paused = true
+            val sh = stateHolder
+            if (sh != null && !sh.paused) {
+                e.pause()
+                sh.paused = true
             }
         }
     }
@@ -124,16 +132,24 @@ class InnerGameplayScreen(
     override fun resize(width: Int, height: Int) {}
     override fun pause() {}
     override fun resume() {}
-
-    override fun hide() {
-        engine.quit()
-        dispose()
+    override fun dispose() {
+        try { batch?.dispose() } catch (_: Exception) {}
+        try { shapeRenderer?.dispose() } catch (_: Exception) {}
+        try { noteRenderer?.dispose() } catch (_: Exception) {}
+        try { font.dispose() } catch (_: Exception) {}
     }
 
-    override fun dispose() {
-        try { batch.dispose() } catch (_: Exception) {}
-        try { shapeRenderer.dispose() } catch (_: Exception) {}
-        try { noteRenderer.dispose() } catch (_: Exception) {}
-        try { font.dispose() } catch (_: Exception) {}
+    fun pauseEngine() {
+        engine?.pause()
+        stateHolder?.paused = true
+    }
+
+    fun resumeEngine() {
+        engine?.unpause()
+        stateHolder?.paused = false
+    }
+
+    fun quitEngine() {
+        engine?.quit()
     }
 }
