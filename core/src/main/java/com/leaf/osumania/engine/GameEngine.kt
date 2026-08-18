@@ -74,7 +74,6 @@ class GameEngine {
     var upscroll: Boolean = false
     var constantSpeed: Boolean = false
     var playbackRate: Float = 1f
-    var constantSpeed: Boolean = false
 
     private var songStartTime: Float = 0f
     private var pauseOffset: Float = 0f

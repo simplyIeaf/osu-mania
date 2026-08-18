@@ -3,7 +3,6 @@ package com.leaf.osumania.api
 import com.badlogic.gdx.Net
 import com.badlogic.gdx.utils.JsonReader
 import com.badlogic.gdx.utils.JsonValue
-import java.io.StringReader
 
 data class ApiBeatmapSet(
     val id: Int = 0,
@@ -61,7 +60,7 @@ class OsuApiClient {
         net.sendHttpRequest(request, object : Net.HttpResponseListener {
             override fun handleHttpResponse(response: Net.HttpResponse) {
                 val text = response.resultAsString
-                val json = JsonReader().read(StringReader(text))
+                val json = JsonReader().parse(text)
                 accessToken = json.getString("access_token")
                 tokenExpiry = System.currentTimeMillis() + json.getLong("expires_in") * 1000
                 callback(true)
@@ -128,18 +127,7 @@ class OsuApiClient {
         }
         net.sendHttpRequest(request, object : Net.HttpResponseListener {
             override fun handleHttpResponse(response: Net.HttpResponse) {
-                val stream = response.result
-                val bytes = if (stream != null) {
-                    val buf = java.io.ByteArrayOutputStream()
-                    val tmp = ByteArray(4096)
-                    var read: Int
-                    while (stream.read(tmp).also { read = it } != -1) {
-                        buf.write(tmp, 0, read)
-                    }
-                    buf.toByteArray()
-                } else {
-                    ByteArray(0)
-                }
+                val bytes = response.resultAsString.toByteArray()
                 if (bytes.size > 1000) callback(bytes) else tryDownload(providers, index + 1, callback)
             }
             override fun failed(t: Throwable) { tryDownload(providers, index + 1, callback) }
@@ -157,7 +145,7 @@ class OsuApiClient {
         }
         net.sendHttpRequest(request, object : Net.HttpResponseListener {
             override fun handleHttpResponse(response: Net.HttpResponse) {
-                val json = JsonReader().read(StringReader(response.resultAsString))
+                val json = JsonReader().parse(response.resultAsString)
                 callback(json)
             }
             override fun failed(t: Throwable) {}
