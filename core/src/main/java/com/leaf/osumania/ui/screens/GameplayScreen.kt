@@ -204,10 +204,13 @@ private fun GameplayHUD(
                     verticalArrangement = Arrangement.spacedBy(12.dp)
                 ) {
                     Text(text = "Paused", color = Color.White, fontSize = 32.sp, fontWeight = FontWeight.Bold)
-                    PauseButton("Continue") {
-                        state.engine?.unpause()
-                        state.paused = false
-                    }
+                    PauseButton(
+                        text = "Continue",
+                        onClick = {
+                            state.engine?.unpause()
+                            state.paused = false
+                        }
+                    )
                     PauseButton("Retry", onRetry)
                     PauseButton("Quit", onQuit, AccentRed)
                 }
