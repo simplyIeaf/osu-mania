@@ -1,224 +1,206 @@
 package com.leaf.osumania.ui.screens
 
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.Screen
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.g2d.BitmapFont
-import com.badlogic.gdx.graphics.g2d.GlyphLayout
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.graphics.g2d.TextureRegion
-import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.scenes.scene2d.ui.Skin
-import com.badlogic.gdx.scenes.scene2d.ui.Slider
-import com.badlogic.gdx.scenes.scene2d.ui.Slider.SliderStyle
-import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
-import com.badlogic.gdx.utils.viewport.ScreenViewport
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Slider
+import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.leaf.osumania.engine.GameConstants
-import com.leaf.osumania.ui.OsuColors
-import com.leaf.osumania.ui.OsuFonts
-import com.leaf.osumania.ui.OsuManiaGame
+import com.leaf.osumania.storage.SettingsStore
+import com.leaf.osumania.ui.theme.AccentGreen
+import com.leaf.osumania.ui.theme.AccentPink
+import com.leaf.osumania.ui.theme.Background
+import com.leaf.osumania.ui.theme.Border
+import com.leaf.osumania.ui.theme.Panel
+import com.leaf.osumania.ui.theme.TextSecondary
 
-class SettingsScreen(private val game: OsuManiaGame) : Screen {
-    private lateinit var batch: SpriteBatch
-    private lateinit var stage: Stage
-    private lateinit var skin: Skin
-
-    private fun makePanelDrawable(): Drawable {
-        val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
-            setColor(OsuColors.PANEL.r, OsuColors.PANEL.g, OsuColors.PANEL.b, 1f)
-            fill()
-        }
-        val tex = com.badlogic.gdx.graphics.Texture(pix)
-        pix.dispose()
-        return TextureRegionDrawable(TextureRegion(tex))
-    }
-
-    private fun makeSliderDrawable(color: Color): Drawable {
-        val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
-            setColor(color.r, color.g, color.b, color.a)
-            fill()
-        }
-        val tex = com.badlogic.gdx.graphics.Texture(pix)
-        pix.dispose()
-        return TextureRegionDrawable(TextureRegion(tex))
-    }
-
-    override fun show() {
-        batch = SpriteBatch()
-        stage = Stage(ScreenViewport())
-        Gdx.input.inputProcessor = stage
-
-        val panelDrawable = makePanelDrawable()
-        val knobDrawable = makeSliderDrawable(OsuColors.ACCENT_PINK)
-
-        skin = Skin()
-        skin.add("default", Label.LabelStyle(OsuFonts.get(16), Color.WHITE))
-        skin.add("small", Label.LabelStyle(OsuFonts.get(13), OsuColors.TEXT_SECONDARY))
-        skin.add("section", Label.LabelStyle(OsuFonts.get(20), OsuColors.ACCENT_PINK))
-
-        val btnStyle = TextButton.TextButtonStyle()
-        btnStyle.up = panelDrawable
-        btnStyle.down = panelDrawable
-        btnStyle.over = panelDrawable
-        btnStyle.font = OsuFonts.get(18)
-        btnStyle.fontColor = Color.WHITE
-        skin.add("default", btnStyle)
-
-        val sliderStyle = SliderStyle(
-            makeSliderDrawable(OsuColors.BORDER),
-            knobDrawable
-        )
-        skin.add("default-horizontal", sliderStyle)
-
-        val root = Table()
-        root.setFillParent(true)
-        root.top()
-        root.pad(10f)
-
-        val header = Table()
-        header.background = panelDrawable
-        header.pad(8f)
-        val backBtn = TextButton("< Back", skin, "default")
-        backBtn.addListener(object : ClickListener() {
-            override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                game.settings.save()
-                game.screen = MainMenuScreen(game)
+@Composable
+fun SettingsScreen(
+    settings: SettingsStore,
+    onBack: () -> Unit
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .background(Background)
+            .padding(16.dp)
+    ) {
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = Panel)
+            ) {
+                Text("< Back")
             }
-        })
-        header.add(backBtn).left()
-        val title = Label("Settings", skin, "section")
-        header.add(title).expandX().center()
-        root.add(header).fillX().padBottom(10f).row()
+            Text(
+                text = "Settings",
+                modifier = Modifier.weight(1f).padding(start = 16.dp),
+                color = AccentPink,
+                fontSize = 22.sp,
+                fontWeight = FontWeight.Bold
+            )
+        }
 
-        val scrollContent = Table()
-        scrollContent.pad(4f)
+        Spacer(modifier = Modifier.height(8.dp))
 
-        addSection(scrollContent, "Gameplay")
-        addSlider(scrollContent, "Scroll Speed", 1f, 40f, game.settings.scrollSpeed) { game.settings.scrollSpeed = it }
-        addSlider(scrollContent, "Hit Position", 0f, 200f, game.settings.hitPositionOffset) { game.settings.hitPositionOffset = it }
-        addSlider(scrollContent, "Background Dim", 0f, 1f, game.settings.backgroundDim) { game.settings.backgroundDim = it }
-        addToggle(scrollContent, "Upscroll", game.settings.upscroll) { game.settings.upscroll = it }
-        addToggle(scrollContent, "Performance Mode", game.settings.performanceMode) { game.settings.performanceMode = it }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .verticalScroll(rememberScrollState())
+        ) {
+            SectionHeader("Gameplay")
+            SliderSetting("Scroll Speed", 1f, 40f, settings.scrollSpeed) { settings.scrollSpeed = it }
+            SliderSetting("Hit Position", 0f, 200f, settings.hitPositionOffset) { settings.hitPositionOffset = it }
+            SliderSetting("Background Dim", 0f, 1f, settings.backgroundDim) { settings.backgroundDim = it }
+            ToggleSetting("Upscroll", settings.upscroll) { settings.upscroll = it }
+            ToggleSetting("Performance Mode", settings.performanceMode) { settings.performanceMode = it }
 
-        addSection(scrollContent, "Display")
-        addSlider(scrollContent, "Playfield Size", 0.3f, 1.0f, game.settings.stageWidth) { game.settings.stageWidth = it }
-        addSlider(scrollContent, "Playfield X Position", -0.5f, 0.5f, game.settings.stageXOffset) { game.settings.stageXOffset = it }
-        addSlider(scrollContent, "Stage Opacity", 0f, 1f, game.settings.stageOpacity) { game.settings.stageOpacity = it }
-        addSlider(scrollContent, "Receptor Opacity", 0f, 1f, game.settings.receptorOpacity) { game.settings.receptorOpacity = it }
-        addSlider(scrollContent, "Note Scale", 0.5f, 1f, game.settings.noteScale) { game.settings.noteScale = it }
-        addSlider(scrollContent, "Note Offset", -100f, 100f, game.settings.noteOffset) { game.settings.noteOffset = it }
+            SectionHeader("Display")
+            SliderSetting("Playfield Size", 0.3f, 1.0f, settings.stageWidth) { settings.stageWidth = it }
+            SliderSetting("Playfield X Position", -0.5f, 0.5f, settings.stageXOffset) { settings.stageXOffset = it }
+            SliderSetting("Stage Opacity", 0f, 1f, settings.stageOpacity) { settings.stageOpacity = it }
+            SliderSetting("Receptor Opacity", 0f, 1f, settings.receptorOpacity) { settings.receptorOpacity = it }
+            SliderSetting("Note Scale", 0.5f, 1f, settings.noteScale) { settings.noteScale = it }
+            SliderSetting("Note Offset", -100f, 100f, settings.noteOffset) { settings.noteOffset = it }
 
-        addSection(scrollContent, "Skin")
-        addSlider(scrollContent, "Hue", 0f, 360f, game.settings.hue) { game.settings.hue = it }
-        addToggle(scrollContent, "Darker Hold Notes", game.settings.darkerHoldNotes) { game.settings.darkerHoldNotes = it }
+            SectionHeader("Skin")
+            SliderSetting("Hue", 0f, 360f, settings.hue) { settings.hue = it }
+            ToggleSetting("Darker Hold Notes", settings.darkerHoldNotes) { settings.darkerHoldNotes = it }
 
-        val skinStyleRow = Table()
-        skinStyleRow.add(Label("Note Style:", skin, "default")).left().padRight(10f)
-        for (style in GameConstants.SkinStyle.entries) {
-            val btn = TextButton(style.name, skin, "default")
-            if (style == game.settings.skinStyle) btn.color = OsuColors.ACCENT_PINK
-            btn.addListener(object : ClickListener() {
-                override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                    game.settings.skinStyle = style
+            SectionHeader("Note Style")
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                for (style in GameConstants.SkinStyle.entries) {
+                    val isSelected = style == settings.skinStyle
+                    Box(
+                        modifier = Modifier
+                            .background(if (isSelected) AccentPink else Panel, RoundedCornerShape(4.dp))
+                            .clickable { settings.skinStyle = style }
+                            .padding(horizontal = 12.dp, vertical = 6.dp)
+                    ) {
+                        Text(style.name, color = if (isSelected) Background else TextSecondary, fontSize = 12.sp)
+                    }
                 }
-            })
-            skinStyleRow.add(btn).width(80f).height(35f).padRight(4f)
+            }
+
+            SectionHeader("Volume")
+            SliderSetting("Music Volume", 0f, 1f, settings.musicVolume) { settings.musicVolume = it }
+            SliderSetting("SFX Volume", 0f, 1f, settings.sfxVolume) { settings.sfxVolume = it }
+            SliderSetting("Audio Offset", -300f, 300f, settings.audioOffset) { settings.audioOffset = it }
+
+            SectionHeader("HUD")
+            ToggleSetting("Show Score", settings.showScore) { settings.showScore = it }
+            ToggleSetting("Show Combo", settings.showCombo) { settings.showCombo = it }
+            ToggleSetting("Show Accuracy", settings.showAccuracy) { settings.showAccuracy = it }
+            ToggleSetting("Show Health Bar", settings.showHealthBar) { settings.showHealthBar = it }
+            ToggleSetting("Show Error Bar", settings.showErrorBar) { settings.showErrorBar = it }
+            ToggleSetting("Show FPS", settings.showFps) { settings.showFps = it }
         }
-        scrollContent.add(skinStyleRow).fillX().padTop(6f).row()
-
-        addSection(scrollContent, "Volume")
-        addSlider(scrollContent, "Music Volume", 0f, 1f, game.settings.musicVolume) { game.settings.musicVolume = it }
-        addSlider(scrollContent, "SFX Volume", 0f, 1f, game.settings.sfxVolume) { game.settings.sfxVolume = it }
-        addSlider(scrollContent, "Audio Offset", -300f, 300f, game.settings.audioOffset) { game.settings.audioOffset = it }
-
-        addSection(scrollContent, "HUD")
-        addToggle(scrollContent, "Show Score", game.settings.showScore) { game.settings.showScore = it }
-        addToggle(scrollContent, "Show Combo", game.settings.showCombo) { game.settings.showCombo = it }
-        addToggle(scrollContent, "Show Accuracy", game.settings.showAccuracy) { game.settings.showAccuracy = it }
-        addToggle(scrollContent, "Show Health Bar", game.settings.showHealthBar) { game.settings.showHealthBar = it }
-        addToggle(scrollContent, "Show Error Bar", game.settings.showErrorBar) { game.settings.showErrorBar = it }
-        addToggle(scrollContent, "Show FPS", game.settings.showFps) { game.settings.showFps = it }
-
-        val scrollPane = com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(scrollContent, skin)
-        scrollPane.setFadeScrollBars(false)
-        root.add(scrollPane).expand().fill()
-
-        stage.addActor(root)
     }
+}
 
-    private fun addSection(table: Table, title: String) {
-        table.padTop(8f)
-        val label = Label(title, skin, "section")
-        table.add(label).left().padTop(12f).padBottom(4f).row()
+@Composable
+private fun SectionHeader(title: String) {
+    Text(
+        text = title,
+        modifier = Modifier.padding(top = 16.dp, bottom = 4.dp),
+        color = AccentPink,
+        fontSize = 18.sp,
+        fontWeight = FontWeight.SemiBold
+    )
+}
+
+@Composable
+private fun SliderSetting(name: String, min: Float, max: Float, current: Float, onChange: (Float) -> Unit) {
+    var value by remember { mutableFloatStateOf(current) }
+    Row(
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = name,
+            modifier = Modifier.width(140.dp),
+            color = TextSecondary,
+            fontSize = 14.sp
+        )
+        Slider(
+            value = value,
+            onValueChange = { value = it },
+            onValueChangeFinished = { onChange(value) },
+            valueRange = min..max,
+            modifier = Modifier.weight(1f),
+            colors = SliderDefaults.colors(
+                thumbColor = AccentPink,
+                activeTrackColor = AccentPink,
+                inactiveTrackColor = Border
+            )
+        )
+        Text(
+            text = "%.1f".format(value),
+            modifier = Modifier.width(48.dp),
+            color = TextSecondary,
+            fontSize = 12.sp
+        )
     }
+}
 
-    private fun addSlider(table: Table, name: String, min: Float, max: Float, current: Float, onChange: (Float) -> Unit) {
-        val row = Table()
-        row.add(Label("$name:", skin, "default")).left().width(160f)
-        val slider = Slider(min, max, (max - min) / 100f, false, skin)
-        slider.value = current
-        slider.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                onChange(slider.value)
-            }
-        })
-        row.add(slider).expandX().fillX().padLeft(8f).padRight(8f)
-        val valueLabel = Label("%.1f".format(current), skin, "small")
-        slider.addListener(object : com.badlogic.gdx.scenes.scene2d.utils.ChangeListener() {
-            override fun changed(event: ChangeEvent?, actor: com.badlogic.gdx.scenes.scene2d.Actor?) {
-                valueLabel.setText("%.1f".format(slider.value))
-            }
-        })
-        row.add(valueLabel).width(50f)
-        table.add(row).fillX().padTop(4f).row()
-    }
-
-    private fun addToggle(table: Table, name: String, current: Boolean, onChange: (Boolean) -> Unit) {
-        val row = Table()
-        row.add(Label(name, skin, "default")).left().expandX()
-        val btn = TextButton(if (current) "ON" else "OFF", skin, "default")
-        btn.color = if (current) OsuColors.ACCENT_GREEN else OsuColors.TEXT_SECONDARY
-        btn.addListener(object : ClickListener() {
-            override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                val newVal = !current
-                onChange(newVal)
-                btn.setText(if (newVal) "ON" else "OFF")
-                btn.color = if (newVal) OsuColors.ACCENT_GREEN else OsuColors.TEXT_SECONDARY
-            }
-        })
-        row.add(btn).width(70f).height(35f)
-        table.add(row).fillX().padTop(4f).row()
-    }
-
-    override fun render(delta: Float) {
-        Gdx.gl.glClearColor(OsuColors.BACKGROUND.r, OsuColors.BACKGROUND.g, OsuColors.BACKGROUND.b, 1f)
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
-        stage.act(delta)
-        stage.draw()
-    }
-
-    override fun resize(width: Int, height: Int) {
-        stage.viewport.update(width, height, true)
-    }
-
-    override fun pause() {}
-    override fun resume() {}
-
-    override fun hide() {
-        dispose()
-    }
-
-    override fun dispose() {
-        batch.dispose()
-        stage.dispose()
-        skin.dispose()
+@Composable
+private fun ToggleSetting(name: String, current: Boolean, onChange: (Boolean) -> Unit) {
+    var enabled by remember { mutableStateOf(current) }
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 4.dp)
+            .clickable {
+                enabled = !enabled
+                onChange(enabled)
+            },
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(
+            text = name,
+            modifier = Modifier.weight(1f),
+            color = TextSecondary,
+            fontSize = 14.sp
+        )
+        Box(
+            modifier = Modifier
+                .background(if (enabled) AccentGreen else Panel, RoundedCornerShape(4.dp))
+                .padding(horizontal = 12.dp, vertical = 6.dp)
+        ) {
+            Text(
+                text = if (enabled) "ON" else "OFF",
+                color = if (enabled) Background else TextSecondary,
+                fontSize = 12.sp
+            )
+        }
     }
 }

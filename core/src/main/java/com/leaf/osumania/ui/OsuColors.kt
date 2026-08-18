@@ -1,29 +1,21 @@
 package com.leaf.osumania.ui
 
-import com.badlogic.gdx.graphics.Color
+import androidx.compose.ui.graphics.Color
 
 object OsuColors {
-    val BACKGROUND = Color(0.051f, 0.051f, 0.102f, 1f)
-    val PANEL = Color(0.102f, 0.102f, 0.18f, 1f)
-    val PANEL_LIGHT = Color(0.15f, 0.15f, 0.22f, 1f)
-    val BORDER = Color(0.2f, 0.2f, 0.31f, 1f)
-    val TEXT_PRIMARY = Color.WHITE
-    val TEXT_SECONDARY = Color(0.5f, 0.5f, 0.6f, 1f)
-    val TEXT_DIM = Color(0.4f, 0.4f, 0.5f, 1f)
-    val ACCENT_PINK = Color(1f, 0.4f, 0.667f, 1f)
-    val ACCENT_BLUE = Color(0.4f, 0.8f, 1f, 1f)
-    val ACCENT_PURPLE = Color(0.533f, 0.4f, 0.933f, 1f)
-    val ACCENT_GREEN = Color(0.4f, 1f, 0.45f, 1f)
-    val ACCENT_YELLOW = Color(1f, 0.85f, 0.4f, 1f)
-    val ACCENT_RED = Color(1f, 0.267f, 0.267f, 1f)
-    val PRIMARY = Color(0.447f, 0.776f, 0.937f, 1f)
-    val DARK_OVERLAY = Color(0f, 0f, 0f, 0.7f)
-    val STATUS_RANKED = Color(0.7f, 1f, 0.4f, 1f)
-    val STATUS_LOVED = Color(1f, 0.4f, 0.67f, 1f)
-    val STATUS_PENDING = Color(1f, 0.85f, 0.4f, 1f)
-    val STATUS_GRAVEYARD = Color(0.2f, 0.2f, 0.2f, 1f)
-    val TAB_ACTIVE = Color(1f, 1f, 1f, 0.15f)
-    val TAB_INACTIVE = Color(0f, 0f, 0f, 0f)
-    val BUTTON_HOVER = Color(1f, 1f, 1f, 0.1f)
-    val BUTTON_PRESSED = Color(1f, 1f, 1f, 0.05f)
+    val BACKGROUND = Color(0xFF0D0D1A)
+    val PANEL = Color(0xFF1A1A2E)
+    val PANEL_LIGHT = Color(0xFF262640)
+    val BORDER = Color(0xFF333350)
+    val TEXT_PRIMARY = Color.White
+    val TEXT_SECONDARY = Color(0xFF808099)
+    val TEXT_DIM = Color(0xFF666680)
+    val ACCENT_PINK = Color(0xFFFF66AA)
+    val ACCENT_BLUE = Color(0xFF66CCFF)
+    val ACCENT_PURPLE = Color(0xFF8866EE)
+    val ACCENT_GREEN = Color(0xFF66FF73)
+    val ACCENT_YELLOW = Color(0xFFFFD966)
+    val ACCENT_RED = Color(0xFFFF4444)
+    val PRIMARY = Color(0xFF72C6EF)
+    val DARK_OVERLAY = Color(0xB3000000)
 }

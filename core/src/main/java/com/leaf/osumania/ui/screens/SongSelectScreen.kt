@@ -1,162 +1,132 @@
 package com.leaf.osumania.ui.screens
 
-import com.badlogic.gdx.Gdx
-import com.badlogic.gdx.Screen
-import com.badlogic.gdx.graphics.Color
-import com.badlogic.gdx.graphics.GL20
-import com.badlogic.gdx.graphics.Pixmap
-import com.badlogic.gdx.graphics.g2d.BitmapFont
-import com.badlogic.gdx.graphics.g2d.GlyphLayout
-import com.badlogic.gdx.graphics.g2d.SpriteBatch
-import com.badlogic.gdx.scenes.scene2d.InputEvent
-import com.badlogic.gdx.scenes.scene2d.Stage
-import com.badlogic.gdx.scenes.scene2d.ui.Label
-import com.badlogic.gdx.scenes.scene2d.ui.Skin
-import com.badlogic.gdx.scenes.scene2d.ui.Table
-import com.badlogic.gdx.scenes.scene2d.ui.TextButton
-import com.badlogic.gdx.scenes.scene2d.ui.TextField
-import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
-import com.badlogic.gdx.scenes.scene2d.utils.Drawable
-import com.badlogic.gdx.scenes.scene2d.utils.TextureRegionDrawable
-import com.badlogic.gdx.utils.viewport.ScreenViewport
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import com.leaf.osumania.beatmap.BeatmapData
-import com.leaf.osumania.ui.OsuColors
-import com.leaf.osumania.ui.OsuFonts
-import com.leaf.osumania.ui.OsuManiaGame
+import com.leaf.osumania.ui.theme.AccentBlue
+import com.leaf.osumania.ui.theme.AccentGreen
+import com.leaf.osumania.ui.theme.AccentPurple
+import com.leaf.osumania.ui.theme.Background
+import com.leaf.osumania.ui.theme.Panel
+import com.leaf.osumania.ui.theme.TextDim
+import com.leaf.osumania.ui.theme.TextSecondary
 
-class SongSelectScreen(private val game: OsuManiaGame) : Screen {
-    private lateinit var batch: SpriteBatch
-    private lateinit var stage: Stage
-    private lateinit var skin: Skin
-    private val beatmaps = mutableListOf<BeatmapData>()
-
-    private fun makePanelDrawable(): Drawable {
-        val pix = Pixmap(1, 1, Pixmap.Format.RGBA8888).apply {
-            setColor(OsuColors.PANEL.r, OsuColors.PANEL.g, OsuColors.PANEL.b, 1f)
-            fill()
-        }
-        val tex = com.badlogic.gdx.graphics.Texture(pix)
-        pix.dispose()
-        return TextureRegionDrawable(com.badlogic.gdx.graphics.g2d.TextureRegion(tex))
-    }
-
-    override fun show() {
-        batch = SpriteBatch()
-        stage = Stage(ScreenViewport())
-        Gdx.input.inputProcessor = stage
-
-        val panelDrawable = makePanelDrawable()
-
-        skin = Skin()
-        skin.add("default-font", OsuFonts.get(18))
-        skin.add("default", Label.LabelStyle(OsuFonts.get(18), Color.WHITE))
-        skin.add("small", Label.LabelStyle(OsuFonts.get(14), OsuColors.TEXT_SECONDARY))
-        skin.add("title", Label.LabelStyle(OsuFonts.get(28), Color.WHITE))
-
-        val root = Table()
-        root.setFillParent(true)
-        root.top()
-
-        val header = Table()
-        header.background = panelDrawable
-        header.pad(8f)
-        val titleLabel = Label("Song Select", skin, "title")
-        header.add(titleLabel).left().expandX()
-
-        val importBtn = TextButton("Import", skin, "default")
-        importBtn.addListener(object : ClickListener() {
-            override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                game.screen = BeatmapImportScreen(game)
+@Composable
+fun SongSelectScreen(
+    beatmaps: List<BeatmapData>,
+    onSelectBeatmap: (BeatmapData) -> Unit,
+    onImport: () -> Unit,
+    onBack: () -> Unit
+) {
+    Column(modifier = Modifier.fillMaxSize().background(Background)) {
+        Row(
+            modifier = Modifier
+                .fillMaxWidth()
+                .background(Panel)
+                .padding(12.dp),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            Button(
+                onClick = onBack,
+                colors = ButtonDefaults.buttonColors(containerColor = Background)
+            ) {
+                Text("<")
             }
-        })
-        header.add(importBtn).width(100f).height(40f).right()
-        root.add(header).fillX().row()
-
-        val scrollContent = Table()
-        scrollContent.pad(8f)
+            Text(
+                text = "Song Select",
+                modifier = Modifier.weight(1f).padding(start = 12.dp),
+                color = TextSecondary,
+                fontSize = 24.sp,
+                fontWeight = FontWeight.Bold
+            )
+            Button(
+                onClick = onImport,
+                colors = ButtonDefaults.buttonColors(containerColor = AccentBlue)
+            ) {
+                Text("Import", color = Background)
+            }
+        }
 
         if (beatmaps.isEmpty()) {
-            val emptyLabel = Label("No beatmaps loaded.\nImport .osz files to get started.", skin, "small")
-            scrollContent.add(emptyLabel).padTop(40f)
+            Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                Text(
+                    text = "No beatmaps loaded.\nImport .osz files to get started.",
+                    color = TextDim,
+                    fontSize = 16.sp
+                )
+            }
         } else {
-            for (bm in beatmaps) {
-                val card = createBeatmapCard(bm)
-                scrollContent.add(card).fillX().padBottom(4f).row()
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(8.dp),
+                verticalArrangement = androidx.compose.foundation.layout.Arrangement.spacedBy(4.dp)
+            ) {
+                items(beatmaps) { beatmap ->
+                    SongSelectCard(beatmap) { onSelectBeatmap(beatmap) }
+                }
             }
         }
+    }
+}
 
-        val scrollPane = com.badlogic.gdx.scenes.scene2d.ui.ScrollPane(scrollContent, skin)
-        scrollPane.setFadeScrollBars(false)
-        scrollPane.setScrollingDisabled(true, false)
-
-        root.add(scrollPane).expand().fill().row()
-
-        stage.addActor(root)
+@Composable
+private fun SongSelectCard(beatmap: BeatmapData, onClick: () -> Unit) {
+    val keyColor = when (beatmap.difficulty.keyCount) {
+        4 -> AccentBlue
+        7 -> AccentPurple
+        else -> AccentGreen
     }
 
-    private fun createBeatmapCard(beatmap: BeatmapData): Table {
-        val card = Table()
-        card.background = makePanelDrawable()
-        card.pad(8f)
-
-        val color = when (beatmap.difficulty.keyCount) {
-            4 -> OsuColors.ACCENT_BLUE
-            7 -> OsuColors.ACCENT_PURPLE
-            else -> OsuColors.ACCENT_GREEN
-        }
-
-        val info = Table()
-        val titleLabel = Label("${beatmap.metadata.artist} - ${beatmap.metadata.title}", skin)
-        info.add(titleLabel).left().row()
-        val versionLabel = Label(beatmap.metadata.version, skin, "small")
-        info.add(versionLabel).left().row()
-
-        val statsRow = Table()
-        val keysLabel = Label("${beatmap.difficulty.keyCount}K", skin, "small")
-        keysLabel.color = color
-        statsRow.add(keysLabel).padRight(8f)
-        val diffLabel = Label("OD ${beatmap.difficulty.od.toInt()} HP ${beatmap.difficulty.hp.toInt()}", skin, "small")
-        statsRow.add(diffLabel)
-        info.add(statsRow).left().padTop(4f).row()
-
-        card.add(info).expandX().left()
-
-        card.addListener(object : ClickListener() {
-            override fun clicked(event: InputEvent?, x: Float, y: Float) {
-                game.screen = GameplayScreen(game, beatmap)
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .background(Panel, RoundedCornerShape(6.dp))
+            .clickable(onClick = onClick)
+            .padding(12.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Column(modifier = Modifier.weight(1f)) {
+            Text(
+                text = "${beatmap.metadata.artist} - ${beatmap.metadata.title}",
+                color = TextSecondary,
+                fontSize = 16.sp
+            )
+            Text(
+                text = beatmap.metadata.version,
+                color = TextDim,
+                fontSize = 13.sp
+            )
+            Row(modifier = Modifier.padding(top = 4.dp)) {
+                Text(
+                    text = "${beatmap.difficulty.keyCount}K",
+                    color = keyColor,
+                    fontSize = 12.sp,
+                    modifier = Modifier.padding(end = 8.dp)
+                )
+                Text(
+                    text = "OD ${beatmap.difficulty.od.toInt()} HP ${beatmap.difficulty.hp.toInt()}",
+                    color = TextDim,
+                    fontSize = 12.sp
+                )
             }
-        })
-
-        return card
-    }
-
-    fun setBeatmaps(list: List<BeatmapData>) {
-        beatmaps.clear()
-        beatmaps.addAll(list)
-    }
-
-    override fun render(delta: Float) {
-        Gdx.gl.glClearColor(OsuColors.BACKGROUND.r, OsuColors.BACKGROUND.g, OsuColors.BACKGROUND.b, 1f)
-        Gdx.gl.glClear(GL20.GL_COLOR_BUFFER_BIT)
-
-        stage.act(delta)
-        stage.draw()
-    }
-
-    override fun resize(width: Int, height: Int) {
-        stage.viewport.update(width, height, true)
-    }
-
-    override fun pause() {}
-    override fun resume() {}
-
-    override fun hide() {
-        dispose()
-    }
-
-    override fun dispose() {
-        batch.dispose()
-        stage.dispose()
-        skin.dispose()
+        }
     }
 }
