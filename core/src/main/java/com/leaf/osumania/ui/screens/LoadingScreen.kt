@@ -71,10 +71,12 @@ class LoadingScreen(private val game: OsuManiaGame) : Screen {
         val cy = h / 2f
 
         batch.begin()
-        titleFont?.let { font ->
-            layout?.setText(it, "osu!mania")
-            it.color = OsuColors.ACCENT_PINK
-            it.draw(batch, layout!!, cx - layout!!.width / 2f, cy + 60f)
+        val f = titleFont
+        val l = layout
+        if (f != null && l != null) {
+            l.setText(f, "osu!mania")
+            f.color = OsuColors.ACCENT_PINK
+            f.draw(batch, l, cx - l.width / 2f, cy + 60f)
         }
         batch.end()
 

@@ -4,6 +4,7 @@ import com.badlogic.gdx.Game
 import com.badlogic.gdx.Gdx
 import com.badlogic.gdx.Preferences
 import com.leaf.osumania.storage.SettingsStore
+import com.leaf.osumania.ui.screens.LoadingScreen
 
 class OsuManiaGame : Game() {
     lateinit var settings: SettingsStore

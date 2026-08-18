@@ -73,23 +73,23 @@ class AudioSystem : Disposable {
         return song?.position ?: songPosition
     }
 
-    fun playHitsound(column: Int) {
+    fun playColumnHitsound(column: Int) {
         val key = "hit_normal"
         val sound = hitsounds[key]
         sound?.play(sfxVolume)
     }
 
-    fun playHitsound(judgement: Int) {
+    fun playJudgementHitsound(judgement: Int) {
         when (judgement) {
-            320 -> playHitsound("hitclap")
-            300 -> playHitsound("hitnormal")
-            200 -> playHitsound("hitwhistle")
+            320 -> playNamedHitsound("hitclap")
+            300 -> playNamedHitsound("hitnormal")
+            200 -> playNamedHitsound("hitwhistle")
             else -> {}
         }
     }
 
-    fun playHitsound(set: String, sample: String, volume: Float = 1f) {
-        val key = "${set}_${sample}"
+    fun playNamedHitsound(sample: String, volume: Float = 1f) {
+        val key = "hit_$sample"
         val sound = hitsounds[key]
         sound?.play(sfxVolume * volume)
     }

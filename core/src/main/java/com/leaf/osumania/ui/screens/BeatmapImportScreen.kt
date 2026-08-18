@@ -12,8 +12,6 @@ import com.badlogic.gdx.scenes.scene2d.ui.Table
 import com.badlogic.gdx.scenes.scene2d.ui.TextButton
 import com.badlogic.gdx.scenes.scene2d.utils.ClickListener
 import com.badlogic.gdx.utils.viewport.ScreenViewport
-import com.leaf.osumania.api.ApiBeatmapSet
-import com.leaf.osumania.storage.BeatmapManager
 import com.leaf.osumania.ui.OsuManiaGame
 
 class BeatmapImportScreen(

@@ -13,7 +13,7 @@ private const val SECTION_LENGTH = 400f
 private const val RELEASE_THRESHOLD = 30f
 
 private fun applyDecay(value: Float, deltaTime: Float, decayBase: Float): Float {
-    return value * decayBase.pow((deltaTime / 1000f).toDouble()).toFloat()
+    return value * decayBase.toDouble().pow((deltaTime / 1000f).toDouble()).toFloat()
 }
 
 private fun evaluateIndividualDifficulty(holdFactor: Float): Float {

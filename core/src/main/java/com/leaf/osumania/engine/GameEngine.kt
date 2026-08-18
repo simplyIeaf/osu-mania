@@ -74,6 +74,7 @@ class GameEngine {
     var upscroll: Boolean = false
     var constantSpeed: Boolean = false
     var playbackRate: Float = 1f
+    var constantSpeed: Boolean = false
 
     private var songStartTime: Float = 0f
     private var pauseOffset: Float = 0f
@@ -256,7 +257,7 @@ class GameEngine {
         if (column < 0 || column >= keyCount) return
 
         inputSystem.hit(column)
-        audioSystem.playHitsound(column)
+        audioSystem.playColumnHitsound(column)
 
         val note = findCurrentNote(column) ?: return
         noteHit(column, note)
@@ -301,6 +302,7 @@ class GameEngine {
                     if (combo > maxCombo) maxCombo = combo
                     scoreSystem.hit(judgement, combo)
                     healthSystem.hit(judgement)
+                    audioSystem.playJudgementHitsound(judgement)
                 }
             }
             is HoldData -> {
@@ -318,6 +320,7 @@ class GameEngine {
                     if (combo > maxCombo) maxCombo = combo
                     scoreSystem.hit(judgement, combo)
                     healthSystem.hit(judgement)
+                    audioSystem.playJudgementHitsound(judgement)
                 }
             }
         }

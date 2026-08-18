@@ -1,7 +1,6 @@
 package com.leaf.osumania.api
 
 import com.badlogic.gdx.Net
-import com.badlogic.gdx.utils.Json
 import com.badlogic.gdx.utils.JsonReader
 import com.badlogic.gdx.utils.JsonValue
 import java.io.StringReader
@@ -57,11 +56,12 @@ class OsuApiClient {
             method = Net.HttpMethods.POST
             url = tokenUrl
             setContent("client_id=$clientId&client_secret=$clientSecret&grant_type=client_credentials&scope=public")
-            header("Content-Type", "application/x-www-form-urlencoded")
+            setHeader("Content-Type", "application/x-www-form-urlencoded")
         }
         net.sendHttpRequest(request, object : Net.HttpResponseListener {
             override fun handleHttpResponse(response: Net.HttpResponse) {
-                val json = JsonReader().read(StringReader(response.resultAsString))
+                val text = response.resultAsString
+                val json = JsonReader().read(StringReader(text))
                 accessToken = json.getString("access_token")
                 tokenExpiry = System.currentTimeMillis() + json.getLong("expires_in") * 1000
                 callback(true)
@@ -128,7 +128,18 @@ class OsuApiClient {
         }
         net.sendHttpRequest(request, object : Net.HttpResponseListener {
             override fun handleHttpResponse(response: Net.HttpResponse) {
-                val bytes = response.result?.readBytes() ?: ByteArray(0)
+                val stream = response.result
+                val bytes = if (stream != null) {
+                    val buf = java.io.ByteArrayOutputStream()
+                    val tmp = ByteArray(4096)
+                    var read: Int
+                    while (stream.read(tmp).also { read = it } != -1) {
+                        buf.write(tmp, 0, read)
+                    }
+                    buf.toByteArray()
+                } else {
+                    ByteArray(0)
+                }
                 if (bytes.size > 1000) callback(bytes) else tryDownload(providers, index + 1, callback)
             }
             override fun failed(t: Throwable) { tryDownload(providers, index + 1, callback) }
@@ -141,8 +152,8 @@ class OsuApiClient {
         val request = Net.HttpRequest().apply {
             method = Net.HttpMethods.GET
             this.url = url
-            header("Authorization", "Bearer $accessToken")
-            header("Accept", "application/json")
+            setHeader("Authorization", "Bearer $accessToken")
+            setHeader("Accept", "application/json")
         }
         net.sendHttpRequest(request, object : Net.HttpResponseListener {
             override fun handleHttpResponse(response: Net.HttpResponse) {
