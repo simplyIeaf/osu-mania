@@ -103,12 +103,12 @@ class AudioSystem : Disposable {
         hitsounds[key] = sound
     }
 
-    fun setMusicVolume(vol: Float) {
+    fun changeMusicVolume(vol: Float) {
         musicVolume = vol
         song?.volume = vol
     }
 
-    fun setSfxVolume(vol: Float) {
+    fun changeSfxVolume(vol: Float) {
         sfxVolume = vol
     }
 

@@ -216,7 +216,7 @@ class GameEngine {
             timeElapsed += deltaTime * 1000f * playbackRate
         }
 
-        currentTimingPointIndex = getCurrentTimingPointIndex()
+        currentTimingPointIndex = resolveTimingPointIndex()
         updateHolds(deltaTime)
         checkLateMisses()
         checkFail()
@@ -488,7 +488,7 @@ class GameEngine {
         return beatmapData.timingPoints[currentTimingPointIndex.coerceAtMost(beatmapData.timingPoints.size - 1)]
     }
 
-    private fun getCurrentTimingPointIndex(): Int {
+    private fun resolveTimingPointIndex(): Int {
         val tps = beatmapData.timingPoints
         if (tps.isEmpty()) return 0
         var idx = currentTimingPointIndex
